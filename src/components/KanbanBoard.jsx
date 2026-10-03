@@ -4,6 +4,7 @@ import KanbanColumn from './KanbanColumn'
 import { TASK_STATUSES } from '../data/tasks'
 
 export default function KanbanBoard({
+  pendingIds = new Set(),
   tasks,
   allTasks,
   columns = TASK_STATUSES,
@@ -55,7 +56,7 @@ export default function KanbanBoard({
     event.preventDefault()
     const id = event.dataTransfer.getData('text/plain')
     const task = allTasks.find((item) => item.id === id)
-    if (task && task.status !== status) onMoveTask(id, status)
+    if (task && !pendingIds.has(id) && task.status !== status) onMoveTask(id, status)
     setDraggedId(null)
   }
 
@@ -64,11 +65,12 @@ export default function KanbanBoard({
       <p id="column-drag-help" className="sr-only">Tarik judul kolom ke posisi tujuan. Dengan keyboard, fokuskan judul lalu gunakan tombol panah kiri atau kanan.</p>
       {columns.map((status, index) => (
         <div key={status.id} data-column-id={status.id}
-          className={`column-slot w-full md:min-w-[310px] md:flex-1 shrink-0 ${draggedColumnId === status.id ? 'column-dragging' : ''} ${columnTarget?.id === status.id ? `column-insert-${columnTarget.placement}` : ''}`}
+          className={`column-slot w-full md:w-[310px] md:min-w-[310px] md:flex-1 shrink-0 ${draggedColumnId === status.id ? 'column-dragging' : ''} ${columnTarget?.id === status.id ? `column-insert-${columnTarget.placement}` : ''}`}
           onDragOver={(event) => dragOverColumn(event, status.id)}
           onDragLeave={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setColumnTarget((current) => current?.id === status.id ? null : current) }}
           onDrop={(event) => dropColumn(event, status.id)}>
           <KanbanColumn
+            pendingIds={pendingIds}
             status={status}
             columns={columns}
             tasks={tasks.filter((task) => task.status === status.id)}

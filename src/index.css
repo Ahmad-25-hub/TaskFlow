@@ -7,6 +7,13 @@
 :root { font-synthesis: none; text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
 body { margin: 0; min-width: 320px; }
 button, select { cursor: pointer; }
+button:disabled, input:disabled, textarea:disabled, select:disabled { opacity: .6; cursor: wait; }
+.page-loading { display: flex; min-height: 60vh; align-items: center; justify-content: center; gap: 12px; padding: 24px; font-size: 14px; color: #64748b; }
+.error-message { border-radius: 9px; background: #fff1f2; padding: 12px; font-size: 12px; line-height: 1.7; color: #be123c; }
+.auth-story { background: radial-gradient(ellipse at top right, #8688ec66, transparent 70%), #413d88; box-shadow: 0 15px 45px #413d8818; }
+.workspace-card { min-width: 0; border: 1px solid #e3e7ef; border-radius: 16px; background: white; padding: 24px; box-shadow: 0 3px 10px #23314c03; transition: box-shadow .15s, transform .15s; }
+.workspace-card:hover { box-shadow: 0 8px 22px #23314c0a; transform: translateY(-2px); }
+.role-badge { display: inline-flex; height: 25px; align-items: center; border-radius: 6px; padding: 0 9px; font-size: 10px; font-weight: 600; }
 button, a, input, select, textarea { outline-offset: 4px; }
 :focus-visible { outline: 2px solid #6366f1; }
 .brand-mark { background: linear-gradient(140deg, #818cf8, #5b55db); box-shadow: 0 4px 12px #6366f126; }

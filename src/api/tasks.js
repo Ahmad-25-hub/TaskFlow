@@ -1,17 +1,10 @@
-async function request(path = '', options = {}) {
-  const response = await fetch(`/api/tasks.php${path}`, {
-    ...options,
-    headers: { 'Content-Type': 'application/json', ...options.headers },
-  })
-  let result
-  try { result = await response.json() } catch { throw new Error('Respons server tidak valid.') }
-  if (!response.ok) throw new Error(result.error || 'Permintaan gagal.')
-  return result
-}
+import { request, jsonBody } from './client'
+
+const path = (workspaceId, id) => `tasks.php?workspace_id=${encodeURIComponent(workspaceId)}${id ? `&id=${encodeURIComponent(id)}` : ''}`
 
 export const taskApi = {
-  list: async () => (await request()).tasks,
-  create: async (values) => (await request('', { method: 'POST', body: JSON.stringify(values) })).task,
-  move: (id, status) => request(`?id=${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify({ status }) }),
-  remove: (id) => request(`?id=${encodeURIComponent(id)}`, { method: 'DELETE' }),
+  list: async (workspaceId, signal) => (await request(path(workspaceId), { signal })).tasks,
+  create: async (workspaceId, values) => (await request(path(workspaceId), jsonBody('POST', values))).task,
+  move: async (workspaceId, id, status) => (await request(path(workspaceId, id), jsonBody('PATCH', { status }))).task,
+  remove: (workspaceId, id) => request(path(workspaceId, id), { method: 'DELETE' }),
 }

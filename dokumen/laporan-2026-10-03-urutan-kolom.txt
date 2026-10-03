@@ -1,177 +1,107 @@
-LAPORAN PENGERJAAN TASKFLOW: DRAG-AND-DROP URUTAN KOLOM
+LAPORAN TASKFLOW: DRAG-AND-DROP KOLOM DAN MERGE REPOSITORY
 Tanggal: 3 Oktober 2026
-Pembaruan terbaru: tombol klik diganti dengan drag-and-drop sesuai permintaan lanjutan.
-Lokasi proyek: C:\tugas\semester 5\Taskflow
+Proyek: C:\tugas\semester 5\Taskflow
 
 1. PERMINTAAN DAN TUJUAN
+Pengguna meminta urutan kolom dapat diubah, misalnya kolom Masalah disisipkan
+antara In Progress dan Done. Versi awal menggunakan tombol panah. Pengguna
+kemudian meminta drag-and-drop seperti Trello, pembaruan laporan .txt ini,
+serta push ke repository dan merge jika terjadi bentrok.
+Tujuan akhir: kolom dapat dipindahkan langsung dengan drag, urutan tersimpan,
+fungsi task tetap bekerja, dan perubahan terintegrasi dengan versi remote.
 
-Pengguna meminta agar posisi tahapan baru dapat diubah, dengan contoh kolom
-Masalah yang ingin ditempatkan di antara In Progress dan Done. Pengguna juga
-meminta file .txt yang menjelaskan pekerjaan, tujuan, dan kriteria selesai,
-serta pembuatan folder dokumen jika belum tersedia. Dalam permintaan lanjutan,
-pengguna memilih drag-and-drop seperti Trello untuk menggantikan tombol panah
-dan meminta laporan ini diperbarui sesuai implementasi terbaru.
+2. PERILAKU YANG TERSEDIA
+- Tarik judul atau ikon pegangan kolom menuju kolom lain.
+- Lepaskan sebelum/sesudah titik tengah kolom tujuan untuk memilih sisipan.
+- Kolom dapat dipindahkan beberapa posisi sekaligus dalam satu drag.
+- Garis ungu menunjukkan posisi sisipan, kolom asal tampil transparan.
+- Papan dapat bergulir horizontal saat pointer mendekati tepi.
+- Pada layout sempit/vertikal, posisi sisipan mengikuti arah atas/bawah.
+- Lepaskan di luar kolom untuk membatalkan perpindahan.
+- Keyboard: fokuskan judul dengan Tab, gunakan panah untuk mengatur urutan.
+- Urutan disimpan setelah drop dan tetap tersedia setelah reload.
+- ID todo, in_progress, done mempertahankan makna status walaupun berpindah.
+- Kolom utama tetap tidak dapat dihapus.
 
-Istilah "task" dalam permintaan ditafsirkan sebagai kolom/tahapan papan,
-berdasarkan contoh tersebut dan pembicaraan sebelumnya mengenai tiga kolom
-utama. Fitur yang dibuat adalah pengaturan urutan kolom. Tujuannya agar
-pengguna dapat menyesuaikan susunan tahapan dengan alur kerjanya.
+3. IMPLEMENTASI
+KanbanBoard mengelola ID kolom yang ditarik dan lokasi tujuan. Drag kolom
+memakai tipe data application/x-taskflow-column. Drag kartu memakai ID task,
+sehingga drop kolom dan drop kartu diproses sesuai jenis interaksinya.
+KanbanColumn menyediakan area judul yang draggable dan akses keyboard.
+WorkspaceBoard menyusun ulang array menggunakan ID asal, ID tujuan, dan
+posisi before/after. Urutan yang sama tidak dikirim ulang. Selama proses
+penyimpanan, interaksi perubahan kolom dikunci untuk mengurangi bentrokan.
+Pesan keberhasilan/kesalahan disampaikan kepada pengguna.
 
-2. KONDISI AWAL YANG DIPERIKSA
+Frontend menyimpan melalui:
+PATCH /api/columns.php?workspace_id=<id>
+Payload: { "column_ids": ["todo", "in_progress", "masalah", "done"] }
+Daftar wajib memuat seluruh ID kolom workspace yang aktif, tanpa duplikat.
+Backend memeriksa session dan keanggotaan, mengunci workspace dalam transaksi,
+memvalidasi daftar ID, lalu memperbarui sort_order hanya pada workspace itu.
+Papan workspace lain tidak ikut berubah. Respons mengembalikan urutan terbaru.
+Jika penyimpanan gagal, urutan sebelumnya dipertahankan dan error ditampilkan.
 
-- Aplikasi menggunakan React dan Vite untuk frontend.
-- Data task dan kolom disimpan melalui API PHP ke MySQL/MariaDB.
-- API kolom sudah mengembalikan data berdasarkan field sort_order.
-- Kolom tambahan selalu ditambahkan di akhir papan.
-- Belum ada kontrol frontend maupun endpoint untuk mengubah urutan kolom.
-- API kolom sudah memiliki mekanisme cadangan localStorage ketika backend
-  tidak tersedia untuk beberapa operasi.
-- Kolom bawaan menggunakan ID todo, in_progress, dan done. ID ini menentukan
-  makna status, termasuk perhitungan task yang telah selesai.
+4. MERGE DENGAN REMOTE
+Perubahan lokal dibuat sebagai commit 7edfb47.
+Fetch menemukan commit remote de12f6d yang menambahkan login dan multi-workspace.
+Bentrok terjadi pada README.md, api/columns.php, playwright.config.js,
+src/App.jsx, src/api/columns.js, dan src/components/KanbanBoard.jsx.
 
-3. PERUBAHAN YANG DIBUAT
+Penyelesaian dilakukan dengan mempertahankan struktur login/workspace remote,
+lalu mengintegrasikan drag-and-drop ke WorkspaceBoard. State pending task dan
+perubahan layout remote dipertahankan. API reorder diubah menjadi per-workspace,
+dengan pemeriksaan akses yang sama seperti operasi kolom lainnya.
 
-A. Drag-and-drop kolom
-Tombol panah serta baris "Urutan kolom" dihapus dari tampilan. Judul kolom
-beserta ikon pegangan sekarang menjadi area yang dapat ditarik. Pengguna
-menekan dan menahan area ini, menyeretnya ke kolom tujuan, lalu melepasnya.
-Sisi sebelum atau sesudah titik tengah kolom tujuan menentukan posisi
-sisipan. Kolom dapat dipindahkan beberapa posisi sekaligus dalam satu drag.
-Pada papan desktop, arah sisipan mengikuti sisi kiri/kanan. Pada tampilan
-sempit yang menyusun papan vertikal, arah sisipan mengikuti sisi atas/bawah.
-Kolom yang ditarik menjadi lebih transparan. Garis ungu menunjukkan posisi
-sisipan. Papan dapat bergulir horizontal ketika pointer mendekati tepinya.
+Versi remote mengganti penyimpanan lokal dengan backend berautentikasi.
+Karena itu, versi gabungan menggunakan database dan tidak memakai fallback
+localStorage dari implementasi awal. Backend harus aktif untuk menyimpan.
+Tes lama kolom disesuaikan ke login/workspace dan dipindahkan ke
+ tests/z-column-order.spec.js. Tes hasil merge menggunakan database sementara
+ taskflow_test_* melalui npm test; database pengguna tidak dipakai untuk tes.
+README dan laporan ini diperbarui mengikuti arsitektur hasil merge.
 
-B. Pengelolaan interaksi dan state
-KanbanBoard menyimpan identitas kolom yang ditarik dan posisi tujuan.
-App menerima ID kolom asal, ID tujuan, dan posisi before/after, kemudian
-menyusun ulang array kolom dan menyimpannya dengan API yang sudah dibuat.
-Tampilan diperbarui setelah penyimpanan berhasil. Jika urutannya sama,
-tidak ada permintaan penyimpanan. Melepas drag di luar kolom membatalkan
-pemindahan dan membersihkan indikator drag.
-Selama penyimpanan berlangsung, drag kolom serta penambahan/penghapusan
-kolom dinonaktifkan. Pengguna menerima notifikasi berhasil atau pesan error.
-Drag kartu memakai identitas task, sedangkan drag kolom memakai tipe data
-application/x-taskflow-column dan state tersendiri. Drop kartu ditangani
-oleh kolom sebagai perubahan status task; drop kolom ditangani papan
-sebagai perubahan urutan. Keduanya telah diuji agar tidak saling tertukar.
+5. CARA MENGGUNAKAN
+1) Login lalu buka workspace.
+2) Tambahkan kolom Masalah.
+3) Tekan dan tahan judul/ikon pegangan kolom Masalah.
+4) Tarik ke kiri Done atau kanan In Progress.
+5) Lepaskan ketika garis ungu berada pada posisi yang diinginkan.
+6) Reload untuk memastikan urutan tetap tersimpan.
 
-Sebagai akses keyboard, judul kolom dapat difokuskan dengan Tab. Tombol
-panah kiri/atas dan kanan/bawah memindahkan kolom ke posisi sebelumnya atau
-berikutnya. Ini tersedia melalui keyboard tanpa menampilkan tombol panah.
+6. KRITERIA SELESAI DAN VERIFIKASI
+- Drag kolom dapat menyisipkan kolom tambahan: lulus.
+- Urutan database dan reload konsisten: lulus.
+- Kolom utama tetap terlindungi dari penghapusan: lulus.
+- ID duplikat/tidak lengkap/tidak dikenal ditolak: lulus.
+- Urutan workspace lain tidak terpengaruh: lulus.
+- API reorder memerlukan login dan keanggotaan: diuji HTTP 401/403.
+- Drag vertikal pada viewport 390 x 844 bekerja: lulus.
+- Akses keyboard serta batas posisi bekerja: lulus.
+- Drag kartu tetap memindahkan task tanpa mengubah urutan kolom: lulus.
+- Pembatalan drag tidak menyimpan dan membersihkan indikator: lulus.
+- Penolakan server/kegagalan koneksi mempertahankan urutan: lulus.
+- Tes login, kolaborasi, hak akses, task, dan kolom dari remote: lulus.
+- npm test: 15 tes hasil merge lulus.
+- Pengujian migrasi lama dan migrasi berulang: lulus.
+- npm run lint dan npm run build: berhasil.
+- Sintaks PHP api/columns.php: tidak ada kesalahan.
+- Penanda konflik merge dibersihkan dan hasil merge disiapkan untuk push.
 
-C. Penyimpanan melalui API
-Ditambahkan metode reorder pada src/api/columns.js. Metode ini mengirim
-PATCH /api/columns.php dengan payload column_ids yang berisi seluruh ID
-kolom dalam urutan yang diinginkan. Nomor sort_order disusun dari 1.
-Respons berhasil juga disimpan di localStorage sebagai cache kolom.
+7. FILE FITUR UTAMA
+src/components/WorkspaceBoard.jsx: handler reorder per workspace.
+src/components/KanbanBoard.jsx: drag, drop, indikator, scroll, dan pending task.
+src/components/KanbanColumn.jsx: judul draggable dan keyboard.
+src/index.css: gaya pegangan dan indikator sisipan.
+src/api/columns.js: request reorder dengan ID workspace.
+api/columns.php: validasi urutan dan transaksi per workspace.
+tests/z-column-order.spec.js: enam tes urutan kolom dan regresi interaksi.
+README.md: panduan fitur dan API.
+dokumen/laporan-2026-10-03-urutan-kolom.txt: laporan ini.
+File login/workspace, migrasi, dan pengujian lain ikut masuk melalui merge.
 
-D. Backend PHP
-Ditambahkan penanganan PATCH pada api/columns.php. Backend memeriksa bahwa
-daftar ID berbentuk array berurutan, seluruh anggotanya string, tidak kosong,
-tidak memiliki duplikat, dan cocok dengan semua kolom yang ada di database.
-Daftar yang tidak valid ditolak dengan HTTP 422.
-Pembaruan dilakukan dalam transaksi dengan penguncian baris kolom agar
-perubahan sort_order diterapkan secara utuh. Transaksi dibatalkan jika
-terjadi kesalahan database. API mengembalikan kolom dalam urutan terbaru.
-Field sort_order sudah tersedia sehingga tidak diperlukan perubahan skema.
-
-E. Penyimpanan lokal ketika backend tidak tersedia
-Jika server tidak dapat dihubungi atau mengalami kesalahan 5xx, urutan
-disimpan ke localStorage sesuai pola cadangan API kolom yang sudah ada.
-Jika localStorage juga gagal menyimpan, aplikasi menampilkan kesalahan.
-Penolakan 4xx dari server diteruskan sebagai kesalahan agar perubahan
-yang ditolak tidak dianggap berhasil.
-
-F. Tampilan dan dokumentasi
-Gaya tombol panah diganti dengan kursor grab, transparansi kolom yang ditarik,
-dan garis posisi sisipan. Ditambahkan petunjuk akses keyboard dan label
-pada area judul. Footer sekarang mengarahkan pengguna untuk menarik judul. README diperbarui untuk menjelaskan
-cara penggunaan, payload PATCH, dan batasan penyimpanan lokal.
-
-G. Pengujian otomatis
-Ditambahkan tests/column-order.spec.js untuk menguji urutan kolom,
-persistensi, kolom utama, validasi API, mekanisme lokal pada viewport ponsel,
-penanganan penolakan server, akses keyboard, pembatalan drag, dan pemindahan
-kartu agar tidak mengubah urutan kolom.
-Konfigurasi Playwright diubah menjadi satu worker dengan fullyParallel=false
-karena tes integrasi mengubah papan database yang sama. Ini mencegah tes
-penambahan kolom dan pengaturan urutan saling mengganggu.
-
-4. CARA MENGGUNAKAN
-
-1) Tambahkan kolom Masalah seperti biasa.
-2) Tekan dan tahan judul/ikon pegangan kolom Masalah.
-3) Tarik ke sisi kiri kolom Done atau sisi kanan kolom In Progress.
-4) Pastikan garis ungu berada di lokasi sisipan yang diinginkan.
-5) Lepaskan drag. Pada susunan tiga kolom utama, hasilnya menjadi:
-   To Do -> In Progress -> Masalah -> Done.
-6) Muat ulang halaman untuk melihat urutan yang telah tersimpan.
-7) Untuk membatalkan, lepaskan drag di luar kolom.
-
-5. KRITERIA SELESAI DAN HASIL VERIFIKASI
-
-- Kolom tambahan dapat disisipkan setelah In Progress: lulus tes integrasi.
-- Urutan tersimpan di database dan tetap terlihat setelah reload: lulus.
-- Nomor sort_order konsisten dengan urutan yang dikembalikan API: lulus.
-- Tidak ada lagi tombol panah pengaturan kolom di tampilan: lulus.
-- Akses keyboard bekerja dan gerakan melewati batas tidak mengirim request: lulus.
-- Drag kartu memindahkan status task tanpa menyimpan urutan kolom: lulus.
-- Drag kolom yang dibatalkan membersihkan state tanpa menyimpan urutan: lulus.
-- Kolom utama tetap tidak memiliki tombol hapus: lulus.
-- API menolak ID duplikat, daftar tidak lengkap, dan ID yang tidak dikenal
-  tanpa mengubah urutan tersimpan: lulus.
-- Urutan dapat disimpan secara lokal saat backend tidak tersedia, tetap ada
-  setelah reload, dan dapat digeser balik pada viewport 390 x 844: lulus.
-- Penolakan server ditampilkan tanpa mengubah urutan papan: lulus.
-- Fitur task lama tetap lolos tes tambah, reload, pindah status, dan hapus.
-- Fitur tambah kolom lama tetap lolos tes penyimpanan backend.
-- npm test: 7 tes lulus pada pemeriksaan akhir pembaruan drag-and-drop.
-- npm run lint: berhasil.
-- npm run build: berhasil membuat build produksi.
-- Pemeriksaan sintaks PHP pada api/columns.php: tidak ada kesalahan sintaks.
-- Tampilan desktop diperiksa melalui screenshot; ikon pegangan terlihat
-  pada judul kolom tanpa menghalangi kartu tugas.
-- Folder dokumen dan laporan .txt ini berhasil dibuat.
-
-Dalam pengerjaan awal versi tombol, satu assertion tes perlu diperbaiki karena database
-memiliki kolom tambahan bernama Done, selain kolom utama dengan ID done.
-Tes diperbaiki agar memeriksa kolom utama berdasarkan ID dan posisi yang
-sesuai, bukan hanya namanya. Pemeriksaan akhir seluruh tes berhasil.
-Kolom uji yang dibuat selama tes dihapus dan urutan papan semula dipulihkan.
-
-6. DAFTAR FILE YANG DIUBAH / DITAMBAHKAN DALAM RANGKAIAN PENGERJAAN
-
-- src/App.jsx: penyisipan kolom berdasarkan tujuan before/after dan state penyimpanan.
-- src/components/KanbanBoard.jsx: state drag kolom, posisi sisipan, drop, dan scroll.
-- src/components/KanbanColumn.jsx: judul draggable, ikon pegangan, dan akses keyboard.
-- src/index.css: indikator sisipan, kursor drag, transparansi, dan tombol nonaktif.
-- src/api/columns.js: request reorder dan penyimpanan cadangan lokal.
-- api/columns.php: endpoint PATCH, validasi, dan transaksi database.
-- tests/column-order.spec.js: lima tes otomatis fitur drag kolom dan regresi interaksi.
-- playwright.config.js: eksekusi tes berurutan untuk database bersama.
-- README.md: panduan penggunaan dan API baru.
-- dokumen/laporan-2026-10-03-urutan-kolom.txt: laporan pengerjaan ini.
-
-Pada pembaruan terbaru, file frontend, README, tes column-order, dan laporan
-ini diubah. API PHP, penyimpanan reorder, serta konfigurasi tes dari tahap
-sebelumnya tetap digunakan karena sudah mendukung penyimpanan urutan.
-
-7. BATASAN DAN PERILAKU PENTING
-
-Urutan tampilan tidak mengubah ID atau status task. Task di done tetap
-dihitung selesai meskipun kolom tersebut berpindah posisi. Tiga kolom utama
-tetap wajib ada menurut perilaku aplikasi yang sudah tersedia.
-
-Perubahan lokal ketika backend tidak tersedia belum disinkronkan otomatis
-ke database. Saat backend kembali tersedia, pemuatan kolom menggunakan
-urutan database. Pengguna dapat mengatur ulang urutan pada kondisi tersebut
-untuk menyimpannya ke database. Aplikasi belum sepenuhnya dapat bekerja
-offline karena API task masih memerlukan backend.
-
-Pengaturan kolom menggunakan HTML Drag and Drop pada browser desktop.
-Dukungan drag melalui layar sentuh mengikuti kemampuan browser; implementasi
-ini belum menambahkan gesture sentuh khusus. Tes viewport 390 x 844 memakai
-pointer mouse pada layout ponsel, sehingga tidak membuktikan drag sentuh
-pada perangkat fisik. Akses keyboard tersedia melalui area judul kolom.
+8. BATASAN
+Drag menggunakan HTML Drag and Drop pada browser desktop. Dukungan sentuhan
+mengikuti browser; belum ada gesture sentuh khusus. Tes viewport ponsel memakai
+pointer mouse, sehingga tidak membuktikan drag sentuh pada perangkat fisik.
 Pengerjaan ini tidak menambahkan pengaturan urutan kartu di dalam satu kolom.
