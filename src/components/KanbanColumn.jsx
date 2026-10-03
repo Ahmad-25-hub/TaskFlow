@@ -90,8 +90,8 @@ export default function KanbanColumn({
           </button>
         </div>
       </div>
-      <p className="mb-5 text-[11px] text-slate-400 truncate" title={status.description}>{status.description || 'Tahapan alur kerja'}</p>
-      <div className="flex flex-col gap-3.5">
+      <p className="mb-4 text-[11px] text-slate-500 truncate" title={status.description}>{status.description || 'Tahapan alur kerja'}</p>
+      <div className="flex flex-col gap-2.5">
         {tasks.map((task) => (
           <TaskCard
             key={task.id}
@@ -107,8 +107,8 @@ export default function KanbanColumn({
         {tasks.length === 0 && (
           <div className="empty-column">
             <StatusIcon size={25} className="mb-3 opacity-40" />
-            <p className="text-xs font-medium">{isFiltered ? 'Tidak ada task yang cocok' : 'Belum ada task di sini'}</p>
-            <p className="mt-1 text-[11px] leading-5">{isFiltered ? 'Coba kata kunci atau filter lain.' : 'Tambahkan task atau pindahkan kartu ke sini.'}</p>
+            <p className="text-xs font-medium">{isFiltered ? 'Tidak ada task yang cocok' : 'Belum ada task'}</p>
+            <p className="mt-1 text-[11px] leading-5">{isFiltered ? 'Coba pencarian atau filter lain.' : 'Tambahkan task atau pindahkan kartu ke sini.'}</p>
           </div>
         )}
       </div>

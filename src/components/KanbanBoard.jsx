@@ -65,7 +65,7 @@ export default function KanbanBoard({
       <p id="column-drag-help" className="sr-only">Tarik judul kolom ke posisi tujuan. Dengan keyboard, fokuskan judul lalu gunakan tombol panah kiri atau kanan.</p>
       {columns.map((status, index) => (
         <div key={status.id} data-column-id={status.id}
-          className={`column-slot w-full md:w-[310px] md:min-w-[310px] md:flex-1 shrink-0 ${draggedColumnId === status.id ? 'column-dragging' : ''} ${columnTarget?.id === status.id ? `column-insert-${columnTarget.placement}` : ''}`}
+          className={`column-slot w-full md:w-[280px] md:min-w-[280px] md:flex-1 shrink-0 ${draggedColumnId === status.id ? 'column-dragging' : ''} ${columnTarget?.id === status.id ? `column-insert-${columnTarget.placement}` : ''}`}
           onDragOver={(event) => dragOverColumn(event, status.id)}
           onDragLeave={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setColumnTarget((current) => current?.id === status.id ? null : current) }}
           onDrop={(event) => dropColumn(event, status.id)}>
@@ -97,25 +97,16 @@ export default function KanbanBoard({
       ))}
 
       {onOpenAddColumn && (
-        <div className="w-full md:w-[260px] shrink-0">
+        <div className="w-full md:w-[160px] shrink-0">
           <button
             type="button"
             onClick={onOpenAddColumn}
             disabled={isSavingColumnOrder}
             aria-label="Tambah kolom baru"
-            className="add-column-card flex flex-col items-center justify-center gap-3 w-full min-h-[140px] md:min-h-[465px] p-6 text-slate-400 group"
+            className="add-column-card flex items-center gap-3 w-full min-h-[62px] p-4 text-slate-500 group"
           >
-            <div className="flex size-11 items-center justify-center rounded-2xl bg-slate-100 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">
-              <Plus size={20} />
-            </div>
-            <div className="text-center">
-              <span className="text-xs font-bold text-slate-600 group-hover:text-indigo-600 transition-colors block">
-                Tambah Kolom
-              </span>
-              <p className="mt-1 text-[11px] text-slate-400">
-                Buat tahapan status baru
-              </p>
-            </div>
+            <Plus size={17} />
+            <span className="text-xs font-semibold">Tambah kolom</span>
           </button>
         </div>
       )}

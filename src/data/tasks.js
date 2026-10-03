@@ -1,11 +1,11 @@
 export const TASK_STATUSES = [
-  { id: 'todo', label: 'To Do', description: 'Ide yang siap dikerjakan', color: 'indigo' },
-  { id: 'in_progress', label: 'In Progress', description: 'Sedang dibawa jadi nyata', color: 'amber' },
-  { id: 'done', label: 'Done', description: 'Satu langkah lebih dekat', color: 'emerald' },
+  { id: 'todo', label: 'To Do', description: 'Pekerjaan yang belum dimulai', color: 'indigo' },
+  { id: 'in_progress', label: 'In Progress', description: 'Sedang dikerjakan', color: 'amber' },
+  { id: 'done', label: 'Done', description: 'Pekerjaan selesai', color: 'emerald' },
 ]
 
 export const COLOR_OPTIONS = [
-  { id: 'indigo', name: 'Indigo', bg: '#818cf8', ring: 'ring-indigo-400' },
+  { id: 'indigo', name: 'Biru', bg: '#0b67c2', ring: 'ring-blue-400' },
   { id: 'amber', name: 'Amber', bg: '#f59e0b', ring: 'ring-amber-400' },
   { id: 'emerald', name: 'Emerald', bg: '#10b981', ring: 'ring-emerald-400' },
   { id: 'rose', name: 'Rose', bg: '#f43f5e', ring: 'ring-rose-400' },

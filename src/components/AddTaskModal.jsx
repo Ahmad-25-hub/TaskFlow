@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { ArrowRight, Plus, X } from 'lucide-react'
+import { ArrowRight, X } from 'lucide-react'
 import { TASK_STATUSES } from '../data/tasks'
 
 export default function AddTaskModal({ columns = TASK_STATUSES, defaultStatus, onClose, onSubmit, serverError }) {
@@ -51,15 +51,14 @@ export default function AddTaskModal({ columns = TASK_STATUSES, defaultStatus, o
       <section ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="modal-title" aria-describedby="modal-description" className="modal-panel" onKeyDown={handleKeyDown}>
         <div className="mb-6 flex items-start justify-between">
           <div>
-            <span className="mb-4 flex size-11 items-center justify-center rounded-xl bg-indigo-50 text-indigo-500"><Plus size={23} /></span>
-            <h2 id="modal-title" className="text-xl font-bold tracking-tight">Langkah baru dimulai di sini.</h2>
-            <p id="modal-description" className="mt-2 text-xs leading-6 text-slate-500">Tambahkan task dan bawa idemu satu langkah lebih dekat.</p>
+            <h2 id="modal-title" className="text-xl font-bold tracking-tight">Tambah task</h2>
+            <p id="modal-description" className="mt-2 text-xs leading-6 text-slate-500">Tulis pekerjaan yang perlu dikerjakan dan pilih tahap awalnya.</p>
           </div>
           <button type="button" disabled={saving} aria-label="Tutup form" className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700" onClick={onClose}><X size={18} /></button>
         </div>
         <form onSubmit={handleSubmit} aria-busy={saving}>
           {serverError && <p role="alert" className="mb-4 rounded-lg bg-red-50 p-3 text-xs text-red-700">{serverError}</p>}
-          <label htmlFor="task-title" className="form-label">Judul task <span className="text-indigo-500">*</span></label>
+          <label htmlFor="task-title" className="form-label">Judul task <span className="text-blue-600">*</span></label>
           <input ref={titleRef} disabled={saving} id="task-title" className="field mt-2 w-full px-3.5 py-3 text-sm" placeholder="Apa yang ingin kamu kerjakan?" required maxLength={120} value={title} onChange={(event) => { setTitle(event.target.value); setError('') }} aria-invalid={Boolean(error)} aria-describedby={error ? 'title-error' : undefined} />
           {error && <p id="title-error" className="mt-2 text-xs text-red-500">{error}</p>}
           <div className="mt-5">

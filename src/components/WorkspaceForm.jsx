@@ -17,7 +17,7 @@ export default function WorkspaceForm({ mode, onClose, onSuccess }) {
     catch (issue) { setError(issue.message); setBusy(false) }
   }
   return (
-    <Modal title={create ? 'Ruang baru untuk ide baru.' : 'Bergabung dengan tim.'} description={create ? 'Beri nama workspace dan ajak timmu setelahnya.' : 'Minta kode undangan 8 karakter dari anggota workspace.'} busy={busy} onClose={onClose}>
+    <Modal title={create ? 'Buat workspace' : 'Gabung workspace'} description={create ? 'Workspace akan punya papan tugas dan anggota sendiri.' : 'Masukkan kode undangan 8 karakter dari anggota workspace.'} busy={busy} onClose={onClose}>
       <form onSubmit={submit} className="space-y-5">
         {error && <p role="alert" className="error-message">{error}</p>}
         {create ? <>

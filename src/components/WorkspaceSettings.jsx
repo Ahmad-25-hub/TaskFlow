@@ -29,14 +29,14 @@ export default function WorkspaceSettings({ workspace, onClose, onUpdated }) {
   }
 
   return (
-    <Modal title="Anggota & pengaturan" description="Kolaborasi lebih mudah saat semua orang berada di ruang yang sama." onClose={onClose} busy={busy}>
+    <Modal title="Anggota & pengaturan" description="Kelola anggota, kode undangan, dan detail workspace." onClose={onClose} busy={busy}>
       {error && <p role="alert" className="error-message mb-4">{error}</p>}
       {message && <p role="status" className="mb-4 rounded-lg bg-emerald-50 p-3 text-xs text-emerald-700">{message}</p>}
-      <div className="rounded-xl border border-indigo-100 bg-indigo-50/50 p-4">
+      <div className="rounded-lg border border-blue-100 bg-blue-50/60 p-4">
         <p className="text-xs font-semibold text-slate-600">Kode undangan</p>
-        <div className="mt-2 flex items-center justify-between gap-3"><code className="select-all text-xl font-bold tracking-[0.15em] text-indigo-600" data-testid="invite-code">{workspace.invite_code}</code><button type="button" className="secondary-button !bg-white" disabled={busy} onClick={() => action(() => navigator.clipboard.writeText(workspace.invite_code), 'Kode undangan disalin.')}><Copy size={14} />Salin</button></div>
+        <div className="mt-2 flex items-center justify-between gap-3"><code className="select-all text-xl font-bold tracking-[0.15em] text-blue-700" data-testid="invite-code">{workspace.invite_code}</code><button type="button" className="secondary-button !bg-white" disabled={busy} onClick={() => action(() => navigator.clipboard.writeText(workspace.invite_code), 'Kode undangan disalin.')}><Copy size={14} />Salin</button></div>
         <p className="mt-2 text-[11px] leading-5 text-slate-500">Bagikan kode ini agar temanmu bisa bergabung.</p>
-        {owner && <button type="button" disabled={busy} className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-indigo-600" onClick={() => action(async () => onUpdated(await workspaceApi.rotateInvite(workspace.id)), 'Kode baru siap dibagikan. Kode lama tidak berlaku.')}><RefreshCw size={12} />Buat kode baru</button>}
+        {owner && <button type="button" disabled={busy} className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-blue-700" onClick={() => action(async () => onUpdated(await workspaceApi.rotateInvite(workspace.id)), 'Kode baru siap dibagikan. Kode lama tidak berlaku.')}><RefreshCw size={12} />Buat kode baru</button>}
       </div>
       {owner && <form className="mt-6 space-y-4" onSubmit={(event) => { event.preventDefault(); action(async () => onUpdated(await workspaceApi.update(workspace.id, { name, description })), 'Workspace berhasil diperbarui.') }}>
         <label className="form-label block">Nama workspace<input data-autofocus required minLength={2} maxLength={80} disabled={busy} value={name} onChange={(event) => setName(event.target.value)} className="field mt-2 w-full px-3 py-2.5 text-sm" /></label>

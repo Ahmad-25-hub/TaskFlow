@@ -15,17 +15,17 @@ export default function TaskCard({ columns = TASK_STATUSES, task, onDelete, onMo
 
   return (
     <article aria-label={task.title} aria-busy={isBusy} className={`task-card ${isDragging ? 'is-dragging' : ''}`} draggable={!isBusy} onDragStart={handleDragStart} onDragEnd={() => onDragChange(null)}>
-      <div className="mb-3 flex items-center justify-between">
-        <span className={`task-tag tag-${status.color}`}><span className="size-1 rounded-full bg-current" />{status.label}</span>
+      <div className="mb-2 flex items-center justify-between">
+        <span className={`task-card-accent tag-${status.color}`} aria-hidden="true" />
         <div className="flex items-center gap-1">
           <GripVertical size={14} className="text-slate-300" aria-hidden="true" />
           <button type="button" disabled={isBusy} aria-label={`Hapus task ${task.title}`} className="delete-button" onClick={() => onDelete(task.id)}><Trash2 size={14} /></button>
         </div>
       </div>
-      <h4 className="break-words text-[13px] font-bold leading-6 text-slate-700">{task.title}</h4>
-      <p className="task-description mt-1.5 break-words text-xs leading-[1.8] text-slate-500">{task.description || 'Belum ada deskripsi untuk task ini.'}</p>
-      <div className="mt-5 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3">
-        <time dateTime={task.created_at} className="flex items-center gap-1.5 text-[10px] text-slate-400"><CalendarDays size={12} />{dateFormatter.format(new Date(task.created_at))}</time>
+      <h4 className="break-words text-[13px] font-semibold leading-5 text-slate-800">{task.title}</h4>
+      {task.description && <p className="task-description mt-1.5 break-words text-xs leading-[1.6] text-slate-500">{task.description}</p>}
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3">
+        <time dateTime={task.created_at} className="flex items-center gap-1.5 text-[11px] text-slate-500"><CalendarDays size={12} />{dateFormatter.format(new Date(task.created_at))}</time>
         <div className="relative">
           <select disabled={isBusy} aria-label={`Status task ${task.title}`} value={task.status} onChange={(event) => onMove(task.id, event.target.value)} className="task-status-select">
             {columns.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}

@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
-import { ArrowRight, Columns3, X } from 'lucide-react'
+import { ArrowRight, X } from 'lucide-react'
 import { COLOR_OPTIONS } from '../data/tasks'
 
 export default function AddColumnModal({ onClose, onSubmit, serverError }) {
   const [label, setLabel] = useState('')
   const [description, setDescription] = useState('')
-  const [color, setColor] = useState('purple')
+  const [color, setColor] = useState('indigo')
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
   const dialogRef = useRef(null)
@@ -66,14 +66,11 @@ export default function AddColumnModal({ onClose, onSubmit, serverError }) {
       >
         <div className="mb-6 flex items-start justify-between">
           <div>
-            <span className="mb-4 flex size-11 items-center justify-center rounded-xl bg-purple-50 text-purple-600">
-              <Columns3 size={22} />
-            </span>
             <h2 id="modal-column-title" className="text-xl font-bold tracking-tight">
-              Tambah Kolom Baru
+              Tambah kolom
             </h2>
             <p id="modal-column-description" className="mt-2 text-xs leading-6 text-slate-500">
-              Perluas papan Kanban dengan tahapan alur kerja yang sesuai kebutuhan tim.
+              Buat tahap baru yang sesuai dengan alur kerja tim.
             </p>
           </div>
           <button
@@ -91,7 +88,7 @@ export default function AddColumnModal({ onClose, onSubmit, serverError }) {
           {serverError && <p role="alert" className="mb-4 rounded-lg bg-red-50 p-3 text-xs text-red-700">{serverError}</p>}
 
           <label htmlFor="column-label" className="form-label">
-            Nama kolom <span className="text-indigo-500">*</span>
+            Nama kolom <span className="text-blue-600">*</span>
           </label>
           <input disabled={saving}
             ref={inputRef}
@@ -135,7 +132,7 @@ export default function AddColumnModal({ onClose, onSubmit, serverError }) {
                     onClick={() => setColor(opt.id)}
                     className={`flex items-center gap-2 rounded-lg border p-2 text-xs font-medium transition-all ${
                       isSelected
-                        ? 'border-indigo-600 bg-indigo-50/50 text-indigo-900 shadow-sm ring-1 ring-indigo-500'
+                        ? 'border-blue-600 bg-blue-50 text-blue-900 ring-1 ring-blue-600'
                         : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
                     }`}
                   >
@@ -148,7 +145,7 @@ export default function AddColumnModal({ onClose, onSubmit, serverError }) {
           </div>
 
           <div className="mt-5 rounded-xl border border-slate-100 bg-slate-50/60 p-3.5">
-            <span className="text-[11px] font-semibold text-slate-400 block mb-1.5 uppercase tracking-wider">Preview Badge Kolom</span>
+            <span className="text-[11px] font-semibold text-slate-500 block mb-1.5 uppercase tracking-wider">Pratinjau label</span>
             <span className={`task-tag tag-${color}`}>
               <span className="size-1 rounded-full bg-current" />
               {label.trim() || 'Nama Kolom'}

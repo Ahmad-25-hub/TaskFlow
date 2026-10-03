@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { ArrowLeft, ArrowUpRight, CheckCheck, LayoutGrid, Plus, Search, Users, X } from 'lucide-react'
+import { ArrowLeft, CheckCheck, LayoutGrid, Plus, Search, SlidersHorizontal, Users, X } from 'lucide-react'
 import KanbanBoard from './KanbanBoard'
 import AddTaskModal from './AddTaskModal'
 import WorkspaceSettings from './WorkspaceSettings'
@@ -140,64 +140,45 @@ export default function WorkspaceBoard({ workspace, onBack, onUpdated }) {
   }
 
   return (
-    <div className="min-h-screen bg-[#f6f8fb] text-slate-800">
-      <main className="mx-auto max-w-[1480px] px-5 py-8 sm:px-9 lg:px-12 lg:py-11">
-        <div className="mb-7 flex items-center gap-2 text-xs text-slate-400">
-          <button type="button" onClick={onBack} className="flex items-center gap-2 hover:text-indigo-600"><ArrowLeft size={14} />Semua workspace</button><span className="mx-1">/</span><span className="font-medium text-slate-600">{workspace.name}</span>
+    <div className="app-page">
+      <main className="board-main">
+        <div className="board-crumb flex items-center gap-2">
+          <button type="button" onClick={onBack} className="flex items-center gap-2 hover:text-blue-700"><ArrowLeft size={14} />Semua workspace</button><span>/</span><span className="font-medium text-slate-700">{workspace.name}</span>
         </div>
-        <section className="mb-9 flex flex-col justify-between gap-7 lg:flex-row lg:items-center" aria-labelledby="board-title">
-          <div>
-            <p className="eyebrow mb-3">WORKSPACE · {workspace.role === 'owner' ? 'OWNER' : 'MEMBER'}</p>
-            <h1 id="board-title" className="max-w-2xl break-words text-3xl font-bold tracking-tight sm:text-[40px] sm:leading-tight">{workspace.name}<span className="text-indigo-500">.</span></h1>
-            <p className="mt-3 max-w-xl break-words text-sm leading-7 text-slate-500">{workspace.description || 'Satu tempat untuk merapikan ide dan menyelesaikan hal yang berarti.'}</p>
-            <button type="button" onClick={() => setShowSettings(true)} className="secondary-button mt-4"><Users size={15} />Anggota & pengaturan</button>
+        <section className="board-heading" aria-labelledby="board-title">
+          <div className="min-w-0">
+            <p className="eyebrow">PAPAN KERJA · {workspace.role === 'owner' ? 'OWNER' : 'MEMBER'}</p>
+            <h1 id="board-title" className="board-title">{workspace.name}.</h1>
+            <p className="mt-2 max-w-xl break-words text-sm leading-6 text-slate-600">{workspace.description || 'Semua pekerjaan proyek ini ada di satu papan.'}</p>
           </div>
-          <div className="progress-panel w-full rounded-2xl border border-white bg-white/80 p-5 sm:w-72">
-            <div className="flex items-center justify-between">
-              <span className="flex items-center gap-2 text-xs font-semibold text-slate-500"><CheckCheck size={16} className="text-indigo-500" /> Progress project</span>
-              <ArrowUpRight size={15} className="text-slate-400" />
-            </div>
-            <div className="mb-3 mt-4 flex items-end justify-between">
-              <strong className="text-3xl tracking-tight">{progress}<span className="ml-0.5 text-lg text-slate-400">%</span></strong>
-              <span className="pb-1 text-xs text-slate-500">{completed} dari {tasks.length} selesai</span>
-            </div>
-            <div className="h-1.5 overflow-hidden rounded-full bg-slate-100" role="progressbar" aria-label="Progress project" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100}>
-              <div className="h-full rounded-full bg-indigo-500 transition-all duration-300" style={{ width: `${progress}%` }} />
-            </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="progress-panel"><div className="flex items-center justify-between gap-5"><span className="text-xs font-semibold text-slate-600">Progress</span><strong className="text-sm">{progress}%</strong></div><div className="my-2 h-1.5 overflow-hidden rounded-full bg-slate-100" role="progressbar" aria-label="Progress project" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100}><div className="h-full rounded-full bg-blue-600" style={{ width: `${progress}%` }} /></div><p className="text-[11px] text-slate-500">{completed} dari {tasks.length} task selesai</p></div>
+            <button type="button" onClick={() => setShowSettings(true)} className="secondary-button"><Users size={15} />Anggota & pengaturan</button>
           </div>
         </section>
 
         <section aria-label="Papan task">
-          <div className="mb-6 flex flex-col justify-between gap-4 border-b border-slate-200/80 pb-5 sm:flex-row sm:items-center">
-            <div className="flex items-center gap-3">
-              <span className="flex size-9 items-center justify-center rounded-xl bg-indigo-100/70 text-indigo-600"><LayoutGrid size={18} /></span>
-              <h2 className="text-base font-bold">Project board</h2>
-              <span className="rounded-md bg-slate-200/60 px-2 py-1 text-xs font-medium text-slate-500">{tasks.length} task</span>
+          <div className="board-toolbar">
+            <div className="flex items-center gap-2.5">
+              <LayoutGrid size={18} className="text-slate-600" />
+              <h2 className="text-base font-bold">Papan tugas</h2>
+              <span className="count-pill">{tasks.length}</span>
             </div>
-            <div className="flex flex-wrap items-center gap-3">
+            <div className="board-toolbar-actions">
               <label className="relative min-w-0 flex-1 sm:w-52 sm:flex-none">
-                <Search size={16} className="pointer-events-none absolute left-3 top-3 text-slate-400" />
-                <input aria-label="Cari task" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Cari task..." className="field w-full py-2.5 pl-9 pr-8 text-xs" />
+                <Search size={16} className="pointer-events-none absolute left-3 top-3 text-slate-500" />
+                <input aria-label="Cari task" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Cari task" className="field w-full py-2.5 pl-9 pr-8 text-xs" />
                 {query && <button type="button" aria-label="Bersihkan pencarian" onClick={() => setQuery('')} className="absolute right-2 top-2.5 text-slate-400 hover:text-slate-700"><X size={16} /></button>}
               </label>
+              <label className="relative"><SlidersHorizontal size={14} className="pointer-events-none absolute left-3 top-3 text-slate-500" /><select aria-label="Filter status" className="field min-h-10 pl-8 pr-3 text-xs font-medium" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}><option value="all">Semua status</option>{columns.map((status) => <option key={status.id} value={status.id}>{status.label}</option>)}</select></label>
               <button type="button" disabled={loading} className="primary-button" onClick={() => setModalStatus('todo')}><Plus size={17} />Tambah task</button>
             </div>
-          </div>
-          <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-2 text-xs text-slate-500"><span className="size-1.5 rounded-full bg-emerald-500" /><span>Ruang kerja tim kreatifmu</span></div>
-            <label className="flex items-center gap-2 text-xs text-slate-500">Tampilkan
-              <select aria-label="Filter status" className="rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-xs font-medium text-slate-700" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
-                <option value="all">Semua status</option>
-                {columns.map((status) => <option key={status.id} value={status.id}>{status.label}</option>)}
-              </select>
-            </label>
           </div>
           {error && <p role="alert" className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
           {loading ? <p className="py-8 text-center text-sm text-slate-500">Memuat task...</p> : <KanbanBoard onMoveColumn={moveColumn} isSavingColumnOrder={isSavingColumnOrder} columns={columns} onOpenAddColumn={() => { setError(''); setShowAddColumn(true) }} onDeleteColumn={deleteColumn} tasks={filteredTasks} allTasks={tasks} pendingIds={pendingIds} onAddTask={setModalStatus} onDeleteTask={deleteTask} onMoveTask={moveTask} isFiltered={Boolean(query.trim()) || statusFilter !== 'all'} />}
         </section>
-        <footer className="mt-7 flex flex-col items-center justify-between gap-2 text-[11px] text-slate-400 sm:flex-row">
-          <p>Drag kartu antar kolom. Tarik judul kolom untuk mengatur urutan tahapan.</p>
-          <p>Data tersimpan di database TaskFlow</p>
+        <footer className="mt-4 text-xs text-slate-500">
+          <p>Seret kartu untuk mengubah status. Seret judul kolom untuk mengatur urutan.</p>
         </footer>
       </main>
       <div aria-live="polite" role="status" className={notice ? 'toast' : 'sr-only'}>{notice && <CheckCheck size={18} className="shrink-0 text-emerald-500" />}{notice}</div>
