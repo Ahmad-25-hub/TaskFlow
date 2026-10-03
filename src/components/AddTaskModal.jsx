@@ -5,6 +5,7 @@ import { TASK_STATUSES } from '../data/tasks'
 export default function AddTaskModal({ columns = TASK_STATUSES, defaultStatus, onClose, onSubmit, serverError }) {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
+  const [deadline, setDeadline] = useState('')
   const [status, setStatus] = useState(defaultStatus)
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
@@ -42,7 +43,7 @@ export default function AddTaskModal({ columns = TASK_STATUSES, defaultStatus, o
     if (!title.trim()) { setError('Judul task perlu diisi.'); titleRef.current.focus(); return }
     if (saving) return
     setSaving(true)
-    try { await onSubmit({ title: title.trim(), description: description.trim(), status }) }
+    try { await onSubmit({ title: title.trim(), description: description.trim(), status, deadline: deadline || null }) }
     finally { setSaving(false); titleRef.current?.focus() }
   }
 
@@ -71,6 +72,11 @@ export default function AddTaskModal({ columns = TASK_STATUSES, defaultStatus, o
             <select disabled={saving} id="task-status" value={status} onChange={(event) => setStatus(event.target.value)} className="field mt-2 w-full px-3.5 py-3 text-sm">
               {columns.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
             </select>
+          </div>
+          <div className="mt-4">
+            <label htmlFor="task-deadline" className="form-label">Deadline <span className="font-normal text-slate-400">(opsional)</span></label>
+            <input type="date" id="task-deadline" disabled={saving} value={deadline} max="9999-12-31" min="1000-01-01" onChange={(event) => setDeadline(event.target.value)} className="field mt-2 w-full min-w-0 px-3.5 py-3 text-sm" />
+            <p className="mt-2 text-xs text-slate-400">Tanggal saja, tanpa jam. Boleh dikosongkan.</p>
           </div>
           <div className="mt-7 flex items-center justify-end gap-3 border-t border-slate-100 pt-5">
             <button type="button" disabled={saving} onClick={onClose} className="rounded-lg px-4 py-2.5 text-xs font-semibold text-slate-500 hover:bg-slate-100">Batal</button>

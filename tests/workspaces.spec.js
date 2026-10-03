@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { deadlineInfo } from '../src/utils/deadline.js'
 
 const password = 'demo1234'
 const tasksPath = (workspaceId, id = '') => `/api/tasks.php?workspace_id=${workspaceId}${id ? `&id=${id}` : ''}`
@@ -309,4 +310,86 @@ test('API kolom memeriksa anggota, validasi status, kolom utama, dan kegagalan s
     await page.setViewportSize({ width, height: 844 })
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
   }
+})
+
+
+test('penanda tanggal WIB, batas segera, dan Done', () => {
+  const now = new Date('2026-10-03T18:00:00Z')
+  expect(deadlineInfo(null, 'todo', now)).toBeNull()
+  for (const [date, label] of [['2026-10-03', 'Terlambat'], ['2026-10-04', 'Hari ini'], ['2026-10-05', 'Segera'], ['2026-10-06', 'Segera'], ['2026-10-07', 'Deadline']]) {
+    expect(deadlineInfo(date, 'todo', now).label).toBe(label)
+  }
+  expect(deadlineInfo('2026-10-03', 'done', now).label).toBe('Selesai')
+})
+
+test('deadline tambah, ubah, hapus, persistensi dan Done', async ({ page }) => {
+  await register(page.request, 'deadline@example.com')
+  const workspace = await createWorkspace(page.request, 'Tim Deadline')
+  await page.goto(`/#workspace=${workspace.id}`)
+  await page.getByRole('button', { name: 'Tambah task', exact: true }).first().click()
+  await page.getByLabel('Judul task').fill('Task Deadline')
+  await page.getByLabel('Deadline (opsional)').fill('2020-01-01')
+  await page.getByRole('button', { name: 'Buat task', exact: true }).click()
+  const card = page.getByRole('article', { name: 'Task Deadline', exact: true })
+  await expect(card).toContainText('Terlambat')
+  await page.reload()
+  await expect(card).toContainText('Terlambat')
+  await card.getByLabel('Status task Task Deadline').selectOption('done')
+  await expect(card).toContainText('Selesai')
+  await expect(card).not.toContainText('Terlambat')
+  await card.getByLabel('Status task Task Deadline').selectOption('todo')
+  await expect(card).toContainText('Terlambat')
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date())
+  await card.getByRole('button', { name: 'Ubah deadline Task Deadline' }).click()
+  await card.getByLabel('Deadline Task Deadline', { exact: true }).fill(today)
+  await card.getByRole('button', { name: 'Simpan deadline' }).click()
+  await expect(card).toContainText('Hari ini')
+  await page.reload()
+  await expect(card).toContainText('Hari ini')
+  await card.getByRole('button', { name: 'Ubah deadline Task Deadline' }).click()
+  await card.getByRole('button', { name: 'Hapus deadline' }).click()
+  await expect(card.getByRole('button', { name: 'Tambah deadline Task Deadline' })).toBeVisible()
+  await page.reload()
+  await expect(card.getByRole('button', { name: 'Tambah deadline Task Deadline' })).toBeVisible()
+  const tasks = (await (await page.request.get(tasksPath(workspace.id))).json()).tasks
+  expect(tasks[0].deadline).toBeNull()
+  expect(tasks[0].status).toBe('todo')
+  await card.getByRole('button', { name: 'Tambah deadline Task Deadline' }).click()
+  await card.getByLabel('Deadline Task Deadline', { exact: true }).fill('2030-01-01')
+  await card.getByRole('button', { name: 'Simpan deadline' }).click()
+  await expect(card).toContainText('1 Jan 2030')
+  await page.screenshot({ path: 'test-results/deadline-desktop.png', fullPage: true })
+  await page.setViewportSize({ width: 390, height: 844 })
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+  await page.screenshot({ path: 'test-results/deadline-mobile.png', fullPage: true })
+})
+
+test('validasi API deadline, isolasi workspace, dan kegagalan simpan', async ({ page }) => {
+  await register(page.request, 'deadline-validation@example.com')
+  const workspace = await createWorkspace(page.request, 'Validasi Deadline')
+  for (const deadline of ['2026-02-30', '03-10-2026', '2026-10-03T12:00:00Z', 123, '0000-01-01']) {
+    expect((await page.request.post(tasksPath(workspace.id), { data: { title: 'Invalid', description: '', deadline } })).status()).toBe(422)
+  }
+  const response = await page.request.post(tasksPath(workspace.id), { data: { title: 'Deadline API', description: '', deadline: '2028-02-29' } })
+  expect(response.status()).toBe(201)
+  const task = (await response.json()).task
+  const other = await createWorkspace(page.request, 'Deadline Workspace Lain')
+  expect((await page.request.patch(tasksPath(other.id, task.id), { data: { deadline: null } })).status()).toBe(404)
+  expect((await page.request.patch(tasksPath(workspace.id, task.id), { data: { deadline: '2027-02-29' } })).status()).toBe(422)
+  expect((await page.request.patch(tasksPath(workspace.id, task.id), { data: { deadline: '2031-01-01', status: 'done' } })).status()).toBe(200)
+  const saved = (await (await page.request.get(tasksPath(workspace.id))).json()).tasks[0]
+  expect(saved.deadline).toBe('2031-01-01')
+  expect(saved.status).toBe('done')
+  await page.goto(`/#workspace=${workspace.id}`)
+  const card = page.getByRole('article', { name: 'Deadline API', exact: true })
+  await card.getByRole('button', { name: 'Ubah deadline Deadline API' }).click()
+  await card.getByLabel('Deadline Deadline API', { exact: true }).fill('2032-01-01')
+  await page.route('**/api/tasks.php*', (route) => route.request().method() === 'PATCH'
+    ? route.fulfill({ status: 500, json: { error: 'Deadline gagal disimpan.' } }) : route.continue())
+  await card.getByRole('button', { name: 'Simpan deadline' }).click()
+  await expect(page.getByRole('alert')).toContainText('Deadline gagal disimpan.')
+  await expect(card.getByLabel('Deadline Deadline API', { exact: true })).toHaveValue('2032-01-01')
+  expect((await (await page.request.get(tasksPath(workspace.id))).json()).tasks[0].deadline).toBe('2031-01-01')
+  await card.getByRole('button', { name: 'Batal', exact: true }).click()
+  await expect(card).toContainText('1 Jan 2031')
 })

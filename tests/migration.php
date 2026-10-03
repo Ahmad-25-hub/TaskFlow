@@ -18,6 +18,7 @@ try {
     if ((int) $db->query('SELECT COUNT(*) FROM columns')->fetchColumn() !== 5) throw new RuntimeException('Kolom migrasi tidak lengkap atau duplikat.');
     if ($db->query("SELECT color FROM columns WHERE id = 'review'")->fetchColumn() !== 'rose') throw new RuntimeException('Warna kolom lama berubah.');
     if ((int) $db->query('SELECT COUNT(*) FROM tasks t JOIN columns c ON c.workspace_id = t.workspace_id AND c.id = t.status')->fetchColumn() !== 2) throw new RuntimeException('Task hilang dari papan.');
+    if ((int) $db->query('SELECT COUNT(*) FROM tasks WHERE deadline IS NULL')->fetchColumn() !== 2) throw new RuntimeException('Deadline task lama harus kosong.');
     echo "Pengujian migrasi lama dan migrasi berulang berhasil.\n";
 } finally {
     $connection->exec("DROP DATABASE `$name`");

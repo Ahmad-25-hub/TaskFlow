@@ -10,6 +10,8 @@ foreach (['workspace_id', 'created_by'] as $column) {
     $stmt->execute([$column]);
     if (!$stmt->fetchColumn()) $db->exec("ALTER TABLE tasks ADD COLUMN $column CHAR(36) NULL");
 }
+$hasDeadline = $db->query("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'tasks' AND COLUMN_NAME = 'deadline'")->fetchColumn();
+if (!$hasDeadline) $db->exec('ALTER TABLE tasks ADD COLUMN deadline DATE NULL');
 $legacyId = '00000000-0000-4000-8000-000000000000';
 $db->prepare('INSERT IGNORE INTO workspaces (id, name, description, invite_code) VALUES (?, ?, ?, ?)')->execute([$legacyId, 'TaskFlow Hackathon', 'Workspace awal untuk task yang sudah ada.', strtoupper(bin2hex(random_bytes(4)))]);
 $db->prepare('UPDATE tasks SET workspace_id = ? WHERE workspace_id IS NULL')->execute([$legacyId]);

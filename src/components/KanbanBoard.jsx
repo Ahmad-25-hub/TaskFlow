@@ -4,6 +4,7 @@ import KanbanColumn from './KanbanColumn'
 import { TASK_STATUSES } from '../data/tasks'
 
 export default function KanbanBoard({
+  now,
   pendingIds = new Set(),
   tasks,
   allTasks,
@@ -11,6 +12,7 @@ export default function KanbanBoard({
   onAddTask,
   onDeleteTask,
   onMoveTask,
+  onUpdateDeadline,
   onOpenAddColumn,
   onDeleteColumn,
   onMoveColumn,
@@ -71,6 +73,7 @@ export default function KanbanBoard({
           onDrop={(event) => dropColumn(event, status.id)}>
           <KanbanColumn
             pendingIds={pendingIds}
+            now={now}
             status={status}
             columns={columns}
             tasks={tasks.filter((task) => task.status === status.id)}
@@ -78,6 +81,7 @@ export default function KanbanBoard({
             onAddTask={onAddTask}
             onDeleteTask={onDeleteTask}
             onMoveTask={onMoveTask}
+            onUpdateDeadline={onUpdateDeadline}
             onDropTask={dropTask}
             onDeleteColumn={onDeleteColumn}
             onColumnDragStart={setDraggedColumnId}

@@ -18,7 +18,7 @@ workspaceAccess($db, $workspaceId, $user['id']);
 if ($method === 'PATCH') {
     $data = payload();
     $ids = $data['column_ids'] ?? null;
-    if (!is_array($ids) || !array_is_list($ids) || count($ids) === 0 ||
+    if (!is_array($ids) || array_keys($ids) !== range(0, count($ids) - 1) || count($ids) === 0 ||
         count(array_filter($ids, 'is_string')) !== count($ids) ||
         count(array_unique($ids)) !== count($ids)) {
         respond(422, ['error' => 'Urutan harus berisi semua ID kolom tanpa duplikat.']);

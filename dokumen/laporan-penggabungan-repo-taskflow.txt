@@ -1,0 +1,256 @@
+LAPORAN PEKERJAAN TASKFLOW
+Penggabungan perubahan repo dengan progress lokal
+Tanggal laporan: 3 Oktober 2026
+Lokasi proyek: C:\lomba\TaskFlow
+Repository: https://github.com/Ahmad-25-hub/TaskFlow.git
+
+1. RUANG LINGKUP DAN PERMINTAAN
+
+Laporan ini mendokumentasikan pekerjaan pada permintaan sebelumnya: mengecek apakah repository GitHub memiliki perubahan baru dan menggabungkannya dengan progress yang sudah ada di komputer pengguna. Laporan juga mencatat pembuatan file dokumentasi ini pada permintaan saat ini.
+
+Progress lokal yang harus dipertahankan adalah sistem register/login/logout, workspace milik pengguna, bergabung melalui kode undangan, pengaturan anggota, serta task yang disimpan di database taskflow.
+
+2. TUJUAN PEKERJAAN
+
+- Mengambil perubahan terbaru dari repository dan mengintegrasikannya dengan sistem lokal.
+- Mempertahankan fitur login dan multi-workspace yang sudah dibuat.
+- Membuat fitur baru dari repository bekerja dengan pembagian data per workspace.
+- Mempertahankan akun, workspace, dan task yang sudah ada di database.
+- Memastikan hasil integrasi dapat dijalankan dan diuji di lingkungan XAMPP, PHP, MySQL/MariaDB, React, dan Vite.
+- Menyimpan backup sehingga progress sebelumnya dapat dipulihkan jika diperlukan.
+
+3. TEMUAN SAAT PEMERIKSAAN REPOSITORY
+
+Sebelum penggabungan, basis repository lokal adalah commit b574c6c. Perubahan sistem login dan workspace masih berupa progress lokal.
+
+Repository memiliki commit baru:
+937c780 - feat: tambah fitur custom column dinamis dengan tema warna dan persistensi database
+
+Perubahan tersebut menambahkan kolom Kanban dinamis, pilihan warna, form tambah kolom, endpoint PHP kolom, dan penyimpanan kolom di database. Status task pada versi repository sudah menggunakan VARCHAR untuk mendukung status tambahan.
+
+Integrasi perlu disesuaikan karena versi kolom baru menggunakan kolom global, sedangkan sistem lokal memiliki beberapa workspace. Versi client kolom dari repository juga memiliki fallback localStorage yang dapat menampilkan penyimpanan seolah berhasil saat permintaan API gagal.
+
+4. PENGAMANAN PROGRESS DAN DATA
+
+Progress lokal, termasuk file yang belum tercatat Git, disimpan dalam Git stash sebelum mengambil versi terbaru.
+Nama backup:
+Backup login dan workspace sebelum gabung custom columns 937c780
+Hash stash saat dibuat:
+dbbaa3daf91c3bb2ce24e468211efc4f02d159dc
+
+Backup tersebut dipertahankan setelah diterapkan kembali; tidak dihapus saat penggabungan selesai. Backup integrasi lokal yang lebih lama juga tersedia saat pemeriksaan akhir penggabungan.
+
+Database taskflow dibackup sebelum migrasi ke:
+C:\lomba\TaskFlow\database\backup-before-merge-columns.local
+
+File backup database menggunakan akhiran .local yang diabaikan Git. Backup ini merupakan salinan data sebelum migrasi kolom per workspace.
+
+5. LANGKAH PENGGABUNGAN GIT
+
+- Memeriksa status lokal dan perubahan terbaru repository.
+- Menyimpan progress lokal dalam stash.
+- Memperbarui basis lokal ke commit 937c780 melalui fast-forward.
+- Menerapkan kembali progress login dan workspace dari stash.
+- Menyelesaikan konflik pada README, endpoint task, schema dan seed database, App, beberapa komponen Kanban, serta pengujian lama.
+- Mempertahankan alur autentikasi lokal dan mengintegrasikan fitur kolom dinamis ke halaman WorkspaceBoard.
+- Mengganti pengujian board lama tanpa autentikasi dengan pengujian yang sesuai dengan login dan workspace.
+- Memastikan tidak ada file berstatus konflik dan tidak ada penanda konflik Git yang tersisa.
+
+Penggabungan tidak dilakukan dengan menimpa seluruh progress lokal menggunakan versi repository. Setiap bagian yang bertabrakan disesuaikan agar fitur kedua versi bekerja bersama.
+
+6. PERUBAHAN BACKEND PHP
+
+api/columns.php
+- Endpoint kolom menggunakan bootstrap, session, dan koneksi database yang sama dengan sistem login.
+- Setiap permintaan memerlukan pengguna yang sudah login dan merupakan anggota workspace.
+- Daftar, pembuatan, dan penghapusan kolom menggunakan workspace_id.
+- Nama, deskripsi, dan warna kolom divalidasi.
+- Nama kolom yang menghasilkan ID sama dalam satu workspace mendapat akhiran unik.
+- ID kolom yang sama diperbolehkan pada workspace berbeda.
+- Kolom utama todo, in_progress, dan done tidak dapat dihapus.
+- Penghapusan kolom tambahan memindahkan task di dalamnya ke todo hanya pada workspace yang sama.
+- Perubahan kolom memakai transaksi dan penguncian baris workspace untuk mengatur perubahan task/kolom yang berlangsung bersamaan.
+
+api/lib/columns.php
+- Menyediakan fungsi pengisian tiga kolom utama untuk setiap workspace.
+- Menyediakan validasi bahwa status task benar-benar merupakan kolom pada workspace tersebut.
+
+api/tasks.php
+- Validasi status tidak lagi terbatas pada tiga status tetap.
+- Task dapat dibuat atau dipindahkan ke kolom tambahan yang ada pada workspace aktif.
+- Status dari workspace lain atau status yang tidak ada ditolak.
+- Pembatasan task berdasarkan workspace dan pemeriksaan anggota tetap berlaku.
+- Operasi perubahan task disesuaikan dengan transaksi dan penguncian workspace.
+
+api/workspaces.php
+- Pembuatan workspace otomatis membuat tiga kolom utama dalam transaksi yang sama.
+
+api/bootstrap.php
+- Memuat helper kolom agar endpoint dapat menggunakan fungsi bersama.
+
+Endpoint autentikasi dan pengaturan workspace yang sudah ada tetap terintegrasi dengan sistem hasil penggabungan.
+
+7. PERUBAHAN DATABASE DAN MIGRASI
+
+database/schema.sql
+- Mempertahankan tabel users, workspaces, workspace_members, dan tasks.
+- Menambahkan struktur columns dengan primary key gabungan workspace_id dan id.
+- Menambahkan relasi kolom ke workspace.
+- Status task menggunakan VARCHAR(50) untuk menampung kolom tambahan.
+- Menambahkan indeks gabungan workspace_id dan status untuk pencarian task pada workspace.
+
+database/migrate.php
+- Dapat dijalankan pada database lama tanpa menghapus akun atau task.
+- Melengkapi struktur workspace dan pembuat task jika belum ada.
+- Menghubungkan task lama ke workspace awal TaskFlow Hackathon.
+- Mengubah status ENUM menjadi VARCHAR jika diperlukan.
+- Jika tabel columns versi lama masih global, kolom tersebut dipindahkan ke workspace awal.
+- Menyesuaikan primary key kolom menjadi gabungan workspace_id dan id.
+- Membuat kolom utama pada semua workspace yang sudah ada.
+- Membuat kolom pengganti jika terdapat status task lama yang belum mempunyai kolom, agar task tetap terlihat.
+- Mempertahankan label dan warna kolom lama.
+- Memeriksa struktur sebelum menambahkan bagian yang sudah ada, sehingga migrasi dapat dijalankan ulang.
+
+database/seed.sql
+- Mempertahankan data contoh yang sesuai dengan workspace awal.
+- Data contoh tidak digunakan untuk menimpa data pengguna pada proses penggabungan.
+
+Migrasi diterapkan pada database taskflow setelah pengujian pada database sementara berhasil.
+
+Hasil pemeriksaan database utama:
+Sebelum migrasi: 2 akun, 1 workspace, 8 task.
+Setelah migrasi: 2 akun, 1 workspace, 8 task, 3 kolom utama.
+
+Jumlah akun, workspace, dan task tetap sama. Pengujian tidak membuat akun percobaan pada database utama.
+
+8. PERUBAHAN FRONTEND
+
+src/api/columns.js
+- Menggunakan client API bersama dan workspace_id pada setiap permintaan.
+- Menghapus fallback localStorage dari client kolom.
+- Kegagalan API ditampilkan sebagai kesalahan, bukan dianggap sebagai penyimpanan berhasil.
+
+src/components/WorkspaceBoard.jsx
+- Memuat task dan kolom dari workspace aktif.
+- Menambahkan alur tambah dan hapus kolom.
+- Filter status mengikuti daftar kolom dinamis.
+- Memperbarui tampilan dari data server setelah penghapusan kolom.
+- Menampilkan konfirmasi penghapusan yang menjelaskan bahwa task dipindahkan ke To Do.
+
+src/components/KanbanBoard.jsx
+- Menampilkan daftar kolom dinamis dan tombol tambah kolom.
+- Mempertahankan drag-and-drop task.
+- Mencegah perpindahan ulang task yang masih menunggu proses API.
+- Menyesuaikan lebar kolom agar papan dapat digulir pada layar desktop tanpa membuat seluruh halaman melebar.
+
+src/components/KanbanColumn.jsx
+- Menampilkan label, deskripsi, dan warna kolom dinamis.
+- Menampilkan tombol hapus hanya untuk kolom tambahan.
+- Meneruskan status proses task ke kartu agar tombol dan perpindahan tidak berulang saat permintaan masih berjalan.
+
+src/components/TaskCard.jsx
+- Pilihan status mengikuti kolom pada workspace aktif.
+- Label dan warna kartu mengikuti kolom task.
+- Tombol dan drag dinonaktifkan saat task sedang diproses.
+
+src/components/AddTaskModal.jsx
+- Form dapat membuat task langsung pada kolom tambahan.
+- Pilihan status berasal dari daftar kolom workspace.
+- Mempertahankan isi form saat penyimpanan gagal.
+- Memperbaiki pengembalian fokus keyboard setelah proses simpan selesai.
+
+src/components/AddColumnModal.jsx
+- Mendukung pilihan sembilan warna dan preview badge.
+- Menunggu hasil penyimpanan sebelum menutup form.
+- Mencegah pengiriman berulang saat penyimpanan berlangsung.
+- Mempertahankan input saat API gagal.
+- Memperbaiki fokus keyboard setelah kegagalan simpan agar Escape dapat menutup dialog.
+- Menambahkan aria-pressed pada tombol pilihan warna.
+
+src/index.css
+- Mempertahankan tema warna kolom baru dan tampilan login/workspace.
+- Menghapus definisi secondary-button yang duplikat dari hasil penggabungan.
+
+App, Navbar, client autentikasi, form workspace, pengaturan anggota, dan konfigurasi Vite dipertahankan dari progress lokal agar alur login hingga board tetap utuh.
+
+9. PENGUJIAN DAN TEMUAN YANG DIPERBAIKI
+
+Pengujian menggunakan database sementara dengan awalan taskflow_test_. Database sementara dibuat khusus untuk pengujian dan dibersihkan setelah selesai. Server pengujian menggunakan port berbeda dari aplikasi pengguna.
+
+Sembilan skenario browser/API berhasil pada pengujian akhir:
+1. Register pertama, akses task lama, session saat reload, logout, serta login benar/salah.
+2. Membuat workspace, tambah/pindah/drag/hapus task, filter, dan pemisahan task antar workspace.
+3. Bergabung melalui kode, penolakan kode salah, dan kolaborasi task sebagai member.
+4. Owner mengubah workspace, mengganti kode undangan, dan mengeluarkan anggota.
+5. API menolak akses tanpa hak serta manipulasi ID task antar workspace.
+6. Tampilan layar kecil, validasi form, dan navigasi keyboard dialog.
+7. Form mempertahankan input saat penyimpanan gagal dan kembali ke login saat session berakhir.
+8. Kolom custom, pilihan warna, persistensi setelah reload, task pada status tambahan, dan penghapusan kolom yang terisolasi per workspace.
+9. Hak akses API kolom, validasi warna/status, perlindungan kolom utama, ID kolom duplikat, serta kegagalan penyimpanan kolom.
+
+Pengujian migrasi tambahan pada tests/migration.php berhasil:
+- Migrasi dari struktur tabel kolom global versi repository.
+- Mempertahankan warna kolom lama dan dua task contoh pengujian.
+- Menjaga task dengan status tanpa kolom tetap terlihat.
+- Menjalankan migrasi dua kali tanpa menggandakan kolom atau kehilangan task.
+
+Temuan selama pengujian:
+- Fokus keyboard keluar dari dialog ketika tombol dinonaktifkan selama penyimpanan. Ditambahkan pengembalian fokus setelah proses selesai.
+- Variabel nama constraint pada migrasi bertabrakan dengan nama database pengujian yang menggunakan lingkup PHP sama. Variabel diganti agar proses pembersihan database menggunakan nama yang benar. Database percobaan yang tertinggal dari pengujian gagal tersebut sudah dibersihkan.
+
+Pemeriksaan akhir:
+- npm run lint: berhasil.
+- npm run build: berhasil.
+- npm test: 9 pengujian browser/API berhasil, ditambah pengujian migrasi berhasil.
+- Pemeriksaan sintaks seluruh file PHP terkait: tidak ditemukan kesalahan.
+- git diff --check: tidak ditemukan masalah whitespace.
+- Tidak ada konflik Git yang belum diselesaikan.
+- Frontend http://127.0.0.1:5173/ merespons HTTP 200.
+- API http://127.0.0.1:8000/api/auth.php merespons HTTP 200.
+- Screenshot papan diperiksa untuk memastikan tampilan hasil penggabungan terbaca dengan baik.
+
+10. KRITERIA SELESAI
+
+Pekerjaan penggabungan dianggap selesai jika:
+- Perubahan repository terbaru berhasil diambil.
+- Progress login dan multi-workspace lokal tetap berfungsi.
+- Kolom custom dapat ditambah, ditampilkan, disimpan, dan dihapus.
+- Warna dan status kolom tetap ada setelah halaman dimuat ulang.
+- Task dapat dipindahkan ke kolom tambahan melalui pilihan status dan drag-and-drop.
+- Kolom serta task tidak tercampur antar workspace.
+- Penghapusan kolom memindahkan task hanya pada workspace yang bersangkutan.
+- Kesalahan API tidak menghasilkan data palsu atau keberhasilan penyimpanan palsu.
+- Akun, workspace, dan task lama tetap ada setelah migrasi.
+- Konflik Git selesai, aplikasi berhasil dibangun, dan pengujian terkait berhasil.
+- Backup progress dan database tersedia.
+
+Semua kriteria tersebut terpenuhi pada akhir pekerjaan penggabungan.
+
+11. STATUS GIT DAN BATAS PEKERJAAN
+
+Pada akhir pekerjaan penggabungan, basis lokal sudah mengikuti commit 937c780 dan hasil integrasi masih berupa perubahan lokal. Pada pekerjaan tersebut saya tidak melakukan push ke GitHub.
+
+Saat membuat laporan ini, pemeriksaan menunjukkan HEAD lokal sudah berada pada commit:
+de12f6d - menambahkan sistem login, dan sistem multi workspace
+
+Working tree bersih sebelum folder dan laporan ini dibuat. Pemeriksaan tersebut tidak membuktikan apakah commit tersebut sudah di-push; pembuatan laporan ini tidak melakukan fetch, commit, atau push.
+
+12. FILE LAPORAN DAN CARA MENJALANKAN
+
+Folder dokumen belum ada saat permintaan ini diperiksa, sehingga folder dibuat di:
+C:\lomba\TaskFlow\dokumen
+
+Laporan ini disimpan sebagai:
+C:\lomba\TaskFlow\dokumen\laporan-penggabungan-repo-taskflow.txt
+
+Untuk menjalankan aplikasi jika server belum aktif:
+- Aktifkan MySQL melalui XAMPP.
+- Jalankan server PHP dari folder proyek:
+  C:\xampp\php\php.exe -S 127.0.0.1:8000 -t .
+- Jalankan frontend dari terminal lain:
+  npm run dev
+- Buka http://127.0.0.1:5173/
+
+Untuk instalasi baru atau database dengan struktur lama, jalankan npm run db:migrate setelah konfigurasi koneksi benar. Rincian tambahan tersedia dalam README.md.
+
+Kriteria selesai untuk permintaan dokumentasi ini adalah folder dokumen tersedia, file .txt berhasil dibuat, dan isinya menjelaskan tujuan, langkah, perubahan, pengujian, serta hasil pekerjaan secara detail.

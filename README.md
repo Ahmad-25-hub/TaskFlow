@@ -100,3 +100,9 @@ Pengujian mencakup register/login/logout, persistensi session dan task, buat/gab
 ## Urutan kolom
 
 Tarik judul/ikon pegangan kolom dan lepaskan sebelum atau sesudah kolom tujuan. Garis ungu menunjukkan posisi sisipan. Dengan keyboard, fokuskan judul dan gunakan tombol panah. Urutan disimpan per workspace melalui `PATCH /api/columns.php?workspace_id=<id>` dengan payload `{ "column_ids": ["todo", "in_progress", "review", "done"] }` yang mencakup semua ID kolom workspace. Login dan keanggotaan workspace wajib; backend harus aktif. Drag sentuh mengikuti dukungan browser.
+
+## Deadline task
+
+Deadline bersifat opsional dan disimpan sebagai tanggal (DATE, tanpa jam). Isi saat membuat task, atau klik tanggal / **Tambah deadline** di kartu untuk mengubah maupun menghapusnya. Tanggal dihitung berdasarkan WIB (Asia/Jakarta): **Hari ini**, **Segera** untuk 1-2 hari mendatang, dan **Terlambat** untuk tanggal yang sudah lewat. Task di kolom **Done** ditandai **Selesai**. Penanda diperbarui setiap menit selama board terbuka.
+
+Jalankan `npm run db:migrate` untuk menambahkan kolom `deadline` pada instalasi lama. Task lama mendapat nilai kosong; data lain dipertahankan. API task menerima `deadline` berupa `YYYY-MM-DD` atau `null` pada POST/PATCH. PATCH bisa mengubah deadline, status, atau keduanya tanpa menimpa field lainnya.

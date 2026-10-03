@@ -36,6 +36,7 @@ CREATE TABLE IF NOT EXISTS tasks (
   created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   workspace_id CHAR(36) NULL,
   created_by CHAR(36) NULL,
+  deadline DATE NULL,
   INDEX idx_tasks_created_at (created_at),
   INDEX idx_tasks_workspace_status (workspace_id, status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
