@@ -1,13 +1,15 @@
 import { useEffect, useRef, useState } from 'react'
-import { ArrowLeft, BarChart3, CheckCheck, LayoutGrid, Plus, Search, SlidersHorizontal, Users, X } from 'lucide-react'
+import { ArrowLeft, Bot, BarChart3, CheckCheck, LayoutGrid, Plus, Search, SlidersHorizontal, Users, X } from 'lucide-react'
 import KanbanBoard from './KanbanBoard'
 import AddTaskModal from './AddTaskModal'
 import WorkspaceSettings from './WorkspaceSettings'
 import AddColumnModal from './AddColumnModal'
+import AIAssistant from './AIAssistant'
 import { columnApi } from '../api/columns'
 import { taskApi } from '../api/tasks'
 
 export default function WorkspaceBoard({ workspace, onBack, onUpdated, onStatistics }) {
+  const [showAI, setShowAI] = useState(false)
   const [now, setNow] = useState(() => new Date())
   const [showSettings, setShowSettings] = useState(false)
   const [tasks, setTasks] = useState([])
@@ -122,6 +124,14 @@ export default function WorkspaceBoard({ workspace, onBack, onUpdated, onStatist
     } catch (issue) { setError(issue.message) }
   }
 
+  async function aiTasksChanged(result) {
+    try {
+      setTasks(await taskApi.list(workspace.id))
+      setQuery(''); setStatusFilter('all'); setError('')
+      setNotice(result.reply)
+    } catch (issue) { setError(`Perubahan AI sudah tersimpan, tetapi board belum diperbarui. Muat ulang halaman. ${issue.message}`) }
+  }
+
   function openEditTask(task) {
     if (deletingColumnRef.current || pendingRef.current.has(task.id)) return
     setError('')
@@ -195,6 +205,7 @@ export default function WorkspaceBoard({ workspace, onBack, onUpdated, onStatist
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <div className="progress-panel"><div className="flex items-center justify-between gap-5"><span className="text-xs font-semibold text-slate-600">Progress</span><strong className="text-sm">{progress}%</strong></div><div className="my-2 h-1.5 overflow-hidden rounded-full bg-slate-100" role="progressbar" aria-label="Progress project" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100}><div className="h-full rounded-full bg-blue-600" style={{ width: `${progress}%` }} /></div><p className="text-[11px] text-slate-500">{completed} dari {tasks.length} task selesai</p></div>
+            <button type="button" disabled={loading} onClick={() => setShowAI(true)} className="secondary-button"><Bot size={15} />Asisten AI</button>
             <button type="button" onClick={onStatistics} className="secondary-button"><BarChart3 size={15} />Statistik</button>
             <button type="button" onClick={() => setShowSettings(true)} className="secondary-button"><Users size={15} />Anggota & pengaturan</button>
           </div>
@@ -227,6 +238,7 @@ export default function WorkspaceBoard({ workspace, onBack, onUpdated, onStatist
       <div aria-live="polite" role="status" className={notice ? 'toast' : 'sr-only'}>{notice && <CheckCheck size={18} className="shrink-0 text-emerald-500" />}{notice}</div>
       {modalStatus && <AddTaskModal columns={columns} defaultStatus={modalStatus} onClose={() => { setModalStatus(null); setError('') }} onSubmit={addTask} serverError={error} />}
       {editingTask && <AddTaskModal key={editingTask.id} initialTask={editingTask} columns={columns} onClose={() => { setEditingTask(null); setError('') }} onSubmit={editTask} serverError={error} />}
+      {showAI && <AIAssistant workspace={workspace} onClose={() => setShowAI(false)} onTasksChanged={aiTasksChanged} />}
       {showAddColumn && <AddColumnModal onClose={() => { setShowAddColumn(false); setError('') }} onSubmit={addColumn} serverError={error} />}
       {showSettings && <WorkspaceSettings workspace={workspace} onClose={() => setShowSettings(false)} onUpdated={onUpdated} />}
     </div>

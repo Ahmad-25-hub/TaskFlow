@@ -695,3 +695,249 @@ test('statistik workspace kosong dan kegagalan API tidak menampilkan angka palsu
   await page.getByRole('button', { name: 'Coba lagi', exact: true }).click()
   await expect(page.getByLabel('Total task', { exact: true })).toContainText('0')
 })
+
+
+test('AI: chat, membuat task, persistensi riwayat/board dan identitas pembuat', async ({ page }) => {
+  const user = await register(page.request, 'ai-ui@example.com', 'User Asisten')
+  const workspace = await createWorkspace(page.request, 'Tim Asisten AI')
+  await page.goto(`/#workspace=${workspace.id}`)
+  await page.getByRole('button', { name: 'Asisten AI', exact: true }).click()
+  const dialog = page.getByRole('dialog', { name: 'Asisten AI' })
+  await expect(dialog.getByLabel('Pesan untuk AI')).toBeEnabled()
+  await dialog.getByLabel('Pesan untuk AI').fill('Halo, bantu saya merencanakan proyek')
+  await dialog.getByRole('button', { name: 'Kirim', exact: true }).click()
+  await expect(dialog.getByRole('log')).toContainText('Saya bisa membantu merencanakan proyek di Tim Asisten AI.')
+  expect((await (await page.request.get(tasksPath(workspace.id))).json()).tasks).toHaveLength(0)
+  await dialog.getByRole('button', { name: 'Tutup dialog' }).click()
+  await page.getByRole('button', { name: 'Asisten AI', exact: true }).click()
+  await expect(dialog.getByRole('log')).toContainText('Halo, bantu saya merencanakan proyek')
+  await dialog.getByLabel('Pesan untuk AI').fill('Saya ada project buat website profil untuk perusahaan tolong buatkan tugas-tugasnya dengan deadline 2030-10-10')
+  await dialog.getByRole('button', { name: 'Kirim', exact: true }).click()
+  await expect(dialog.getByRole('log')).toContainText('3 task berhasil dibuat')
+  await expect(dialog.getByRole('log')).toContainText('Riset kebutuhan perusahaan')
+  const tasks = (await (await page.request.get(tasksPath(workspace.id))).json()).tasks
+  expect(tasks).toHaveLength(3)
+  expect(tasks.every((task) => task.status === 'todo' && task.created_by === user.id && task.creator_name === 'User Asisten')).toBe(true)
+  expect(tasks.find((task) => task.title === 'Riset kebutuhan perusahaan').deadline).toBe('2030-10-10')
+  await page.screenshot({ path: 'test-results/ai-assistant-desktop.png', fullPage: true })
+  await page.setViewportSize({ width: 390, height: 844 })
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+  await page.screenshot({ path: 'test-results/ai-assistant-mobile.png', fullPage: true })
+  await dialog.getByRole('button', { name: 'Tutup dialog' }).click()
+  await expect(page.getByRole('article')).toHaveCount(3)
+  await page.reload()
+  await expect(page.getByRole('article')).toHaveCount(3)
+})
+
+test('AI API: retry tidak membuat duplikat, chat memakai konteks, akses dan riwayat terisolasi', async ({ page, playwright, baseURL }) => {
+  await register(page.request, 'ai-api@example.com')
+  const workspace = await createWorkspace(page.request, 'AI Workspace A')
+  const other = await createWorkspace(page.request, 'AI Workspace B')
+  const path = `/api/assistant.php?workspace_id=${workspace.id}`
+  const id = crypto.randomUUID()
+  const data = { message: 'Tolong buatkan task website perusahaan', request_id: id }
+  const first = await page.request.post(path, { data })
+  expect(first.status()).toBe(200)
+  const result = await first.json()
+  expect(result.tasks).toHaveLength(3)
+  expect((await (await page.request.post(path, { data })).json())).toEqual(result)
+  expect((await (await page.request.get(tasksPath(workspace.id))).json()).tasks).toHaveLength(3)
+  expect((await page.request.post(path, { data: { ...data, message: 'Pesan berbeda' } })).status()).toBe(409)
+  const chat = await page.request.post(path, { data: { message: 'ingat pesan pertama', request_id: crypto.randomUUID() } })
+  expect((await chat.json()).reply).toContain(data.message)
+  expect((await (await page.request.get(`/api/assistant.php?workspace_id=${other.id}`)).json()).messages).toHaveLength(0)
+  const stranger = await playwright.request.newContext({ baseURL })
+  try {
+    expect((await stranger.post(path, { data })).status()).toBe(401)
+    await register(stranger, 'ai-stranger@example.com')
+    expect((await stranger.post(path, { data })).status()).toBe(403)
+    await stranger.post('/api/workspaces.php?action=join', { data: { invite_code: workspace.invite_code } })
+    expect((await (await stranger.get(path)).json()).messages).toHaveLength(0)
+    expect((await stranger.post(path, { data })).status()).toBe(409)
+    const member = await stranger.post(path, { data: { message: 'buatkan task baru', request_id: crypto.randomUUID() } })
+    expect(member.status()).toBe(200)
+    expect((await member.json()).tasks).toHaveLength(3)
+  } finally { await stranger.dispose() }
+})
+
+test('AI API: respons buruk dan kuota gagal tanpa batch task sebagian', async ({ page }) => {
+  await register(page.request, 'ai-errors@example.com')
+  const workspace = await createWorkspace(page.request, 'AI Gagal')
+  const path = `/api/assistant.php?workspace_id=${workspace.id}`
+  for (const [message, expected] of [['simulate_invalid', 422], ['simulate_unknown', 502], ['simulate_quota', 429], ['simulate_key', 502], ['simulate_incomplete', 502]]) {
+    expect((await page.request.post(path, { data: { message, request_id: crypto.randomUUID() } })).status()).toBe(expected)
+  }
+  expect((await page.request.post(path, { data: { message: 'test', request_id: 'invalid' } })).status()).toBe(422)
+  expect((await (await page.request.get(tasksPath(workspace.id))).json()).tasks).toHaveLength(0)
+  expect((await (await page.request.get(path)).json()).messages).toHaveLength(0)
+})
+
+test('AI UI: error mempertahankan pesan, retry sukses dan tidak menggandakan task', async ({ page }) => {
+  await register(page.request, 'ai-retry@example.com')
+  const workspace = await createWorkspace(page.request, 'AI Retry')
+  await page.goto(`/#workspace=${workspace.id}`)
+  await page.getByRole('button', { name: 'Asisten AI', exact: true }).click()
+  const dialog = page.getByRole('dialog', { name: 'Asisten AI' })
+  let first = true
+  await page.route('**/api/assistant.php*', async (route) => {
+    if (route.request().method() === 'POST' && first) {
+      first = false
+      await route.fetch() // server sudah menyimpan; respons ke browser hilang
+      return route.fulfill({ status: 502, json: { error: 'Koneksi terputus setelah simpan.' } })
+    }
+    return route.continue()
+  })
+  await dialog.getByLabel('Pesan untuk AI').fill('buatkan task website')
+  await dialog.getByRole('button', { name: 'Kirim', exact: true }).click()
+  await expect(dialog.getByRole('alert')).toContainText('Koneksi terputus')
+  await expect(dialog.getByLabel('Pesan untuk AI')).toHaveValue('buatkan task website')
+  await dialog.getByRole('button', { name: 'Kirim', exact: true }).click()
+  await expect(dialog.getByRole('log')).toContainText('3 task berhasil dibuat')
+  expect((await (await page.request.get(tasksPath(workspace.id))).json()).tasks).toHaveLength(3)
+  await dialog.getByRole('button', { name: 'Tutup dialog' }).click()
+  await expect(page.getByRole('article')).toHaveCount(3)
+})
+
+test('AI belum dikonfigurasi memberi petunjuk; file konfigurasi dan backup tidak publik', async ({ page }) => {
+  await register(page.request, 'ai-config@example.com')
+  const workspace = await createWorkspace(page.request, 'AI Konfigurasi')
+  await page.route('**/api/assistant.php*', (route) => route.fulfill({ json: { configured: false, messages: [] } }))
+  await page.goto(`/#workspace=${workspace.id}`)
+  await page.getByRole('button', { name: 'Asisten AI', exact: true }).click()
+  const dialog = page.getByRole('dialog', { name: 'Asisten AI' })
+  await expect(dialog.getByText('AI belum aktif.', { exact: false })).toBeVisible()
+  await expect(dialog.getByRole('button', { name: 'Kirim', exact: true })).toBeDisabled()
+  await expect(dialog.getByRole('button', { name: 'Muat ulang asisten' })).toBeVisible()
+  expect((await page.request.get('http://127.0.0.1:8001/.env')).status()).toBe(404)
+  expect((await page.request.get('http://127.0.0.1:8001/database/backup-before-task-attribution.local')).status()).toBe(404)
+  expect((await page.request.get('http://127.0.0.1:8001/api/lib/env.php')).status()).toBe(404)
+})
+
+const toolCall = (name, tasks) => ({ type: 'function_call', name, arguments: { tasks } })
+const toolMessage = (...calls) => `fixture_calls:${JSON.stringify(calls)}`
+async function askAI(api, workspaceId, message, requestId = crypto.randomUUID()) {
+  return api.post(`/api/assistant.php?workspace_id=${workspaceId}`, { data: { message, request_id: requestId } })
+}
+
+test('AI UI: edit tersimpan, board diperbarui dan retry hapus tidak menghapus task lain', async ({ page }) => {
+  const user = await register(page.request, 'ai-edit-ui@example.com', 'Editor AI')
+  const workspace = await createWorkspace(page.request, 'AI Edit Hapus')
+  await askAI(page.request, workspace.id, 'buatkan task website')
+  const original = (await (await page.request.get(tasksPath(workspace.id))).json()).tasks.find((task) => task.title === 'Riset kebutuhan perusahaan')
+  await page.goto(`/#workspace=${workspace.id}`)
+  await page.getByRole('button', { name: 'Mode gelap' }).click()
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
+  await page.getByRole('button', { name: 'Asisten AI', exact: true }).click()
+  const dialog = page.getByRole('dialog', { name: 'Asisten AI' })
+  await dialog.getByLabel('Pesan untuk AI').fill('Ubah task Riset kebutuhan perusahaan menjadi Riset profil perusahaan, deadline 2030-11-20 dan status Done')
+  await dialog.getByRole('button', { name: 'Kirim', exact: true }).click()
+  await expect(dialog.getByRole('log')).toContainText('1 task berhasil diedit')
+  await expect(dialog.getByRole('region', { name: 'Task diedit' })).toContainText('Riset profil perusahaan')
+  const edited = (await (await page.request.get(tasksPath(workspace.id))).json()).tasks.find((task) => task.id === original.id)
+  expect(edited).toMatchObject({ title: 'Riset profil perusahaan', description: original.description, deadline: '2030-11-20', status: 'done', created_by: original.created_by, created_at: original.created_at, completed_by: user.id })
+  expect(edited.completed_at).toBeTruthy()
+  await dialog.getByRole('button', { name: 'Tutup dialog' }).click()
+  await expect(region(page, 'Done').getByRole('article')).toContainText('Riset profil perusahaan')
+  await page.reload()
+  await page.getByRole('button', { name: 'Asisten AI', exact: true }).click()
+  await expect(dialog.getByRole('region', { name: 'Task diedit' })).toContainText('Riset profil perusahaan')
+  let first = true
+  await page.route('**/api/assistant.php*', async (route) => {
+    if (route.request().method() === 'POST' && first) {
+      first = false
+      await route.fetch()
+      return route.fulfill({ status: 502, json: { error: 'Respons hapus terputus.' } })
+    }
+    return route.continue()
+  })
+  await dialog.getByLabel('Pesan untuk AI').fill('Hapus task Riset profil perusahaan')
+  await dialog.getByRole('button', { name: 'Kirim', exact: true }).click()
+  await expect(dialog.getByRole('alert')).toContainText('Respons hapus terputus')
+  await dialog.getByRole('button', { name: 'Kirim', exact: true }).click()
+  await expect(dialog.getByRole('log')).toContainText('1 task berhasil dihapus')
+  await expect(dialog.getByRole('region', { name: 'Task dihapus' })).toContainText('Riset profil perusahaan')
+  await page.setViewportSize({ width: 390, height: 844 })
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+  await page.screenshot({ path: 'test-results/ai-edit-delete-mobile.png', fullPage: true })
+  await dialog.getByRole('button', { name: 'Tutup dialog' }).click()
+  await expect(page.getByRole('article')).toHaveCount(2)
+  await page.reload()
+  await expect(page.getByRole('article')).toHaveCount(2)
+  await page.getByRole('button', { name: 'Asisten AI', exact: true }).click()
+  await expect(dialog.getByRole('region', { name: 'Task dihapus' })).toContainText('Riset profil perusahaan')
+})
+
+test('AI API: edit parsial, status custom, penyelesai, retry dan izin member', async ({ page, playwright, baseURL }) => {
+  const owner = await register(page.request, 'ai-edit-api@example.com', 'Pembuat AI')
+  const workspace = await createWorkspace(page.request, 'API Edit AI')
+  const { tasks: [original] } = await (await askAI(page.request, workspace.id, 'buatkan task website')).json()
+  const column = (await (await page.request.post(`/api/columns.php?workspace_id=${workspace.id}`, { data: { label: 'Review AI', description: '', color: 'indigo' } })).json()).column
+  const member = await otherAccount(playwright, baseURL, 'ai-editor-member@example.com', 'Penyelesai AI')
+  try {
+    const edit = toolMessage(toolCall('edit_tasks', [{ task_id: original.id, status: 'done', deadline: '2030-12-10' }]))
+    expect((await askAI(member.api, workspace.id, edit)).status()).toBe(403)
+    await member.api.post('/api/workspaces.php?action=join', { data: { invite_code: workspace.invite_code } })
+    const id = crypto.randomUUID()
+    const result = await (await askAI(member.api, workspace.id, edit, id)).json()
+    expect(result.tasks).toHaveLength(0)
+    const completed = result.updated_tasks[0]
+    expect(completed).toMatchObject({ id: original.id, title: original.title, description: original.description, status: 'done', created_by: owner.id, created_at: original.created_at, completed_by: member.user.id, deadline: '2030-12-10' })
+    expect(await (await askAI(member.api, workspace.id, edit, id)).json()).toEqual(result)
+    const titleEdit = await (await askAI(page.request, workspace.id, toolMessage(toolCall('edit_tasks', [{ task_id: original.id, title: 'Riset selesai', description: 'Deskripsi baru', status: 'done', deadline: '' }])))).json()
+    expect(titleEdit.updated_tasks[0]).toMatchObject({ title: 'Riset selesai', description: 'Deskripsi baru', deadline: null, completed_by: member.user.id, completed_at: completed.completed_at })
+    const moved = await (await askAI(member.api, workspace.id, toolMessage(toolCall('edit_tasks', [{ task_id: original.id, status: column.id }])))).json()
+    expect(moved.updated_tasks[0]).toMatchObject({ status: column.id, completed_by: null, completed_at: null })
+    const deleted = await askAI(member.api, workspace.id, toolMessage(toolCall('delete_tasks', [{ task_id: original.id }])))
+    expect(deleted.status()).toBe(200)
+    expect((await deleted.json()).deleted_tasks[0].id).toBe(original.id)
+    expect((await (await page.request.get(tasksPath(workspace.id))).json()).tasks).toHaveLength(2)
+  } finally { await member.api.dispose() }
+})
+
+test('AI API: validasi semua tindakan, target workspace, duplikat dan batas batch', async ({ page }) => {
+  await register(page.request, 'ai-edit-invalid@example.com')
+  const workspace = await createWorkspace(page.request, 'Validasi Edit AI')
+  const other = await createWorkspace(page.request, 'Target Lain')
+  const { tasks } = await (await askAI(page.request, workspace.id, 'buat task website')).json()
+  const { tasks: [outside] } = await (await askAI(page.request, other.id, 'buat task lain')).json()
+  const cases = [
+    [toolMessage(toolCall('delete_tasks', [{ task_id: tasks[0].id }]), toolCall('edit_tasks', [{ task_id: tasks[1].id, title: ' ' }])), 422],
+    [toolMessage(toolCall('create_tasks', [{ title: 'Jangan tersimpan', description: '' }]), toolCall('edit_tasks', [{ task_id: tasks[0].id, status: 'missing-column' }])), 422],
+    [toolMessage(toolCall('edit_tasks', [{ task_id: tasks[0].id, deadline: '2030-02-30' }])), 422],
+    [toolMessage(toolCall('edit_tasks', [{ task_id: tasks[0].id }])), 422],
+    [toolMessage(toolCall('edit_tasks', [{ task_id: outside.id, title: 'Tidak boleh' }])), 422],
+    [toolMessage(toolCall('delete_tasks', [{ task_id: outside.id }])), 422],
+    [toolMessage(toolCall('delete_tasks', [{ task_id: tasks[0].id }, { task_id: tasks[0].id }])), 422],
+    [toolMessage(toolCall('edit_tasks', [{ task_id: tasks[0].id, title: 'X' }]), toolCall('delete_tasks', [{ task_id: tasks[0].id }])), 422],
+    [toolMessage(toolCall('edit_tasks', [{ task_id: tasks[0].id, created_by: 'spoofed', title: 'X' }])), 502],
+    [toolMessage(toolCall('create_tasks', Array.from({ length: 21 }, (_, i) => ({ title: `Task ${i}`, description: '' })))), 502],
+  ]
+  for (const [message, status] of cases) expect((await askAI(page.request, workspace.id, message)).status()).toBe(status)
+  const current = (await (await page.request.get(tasksPath(workspace.id))).json()).tasks
+  expect(current.sort((a, b) => a.id.localeCompare(b.id))).toEqual([...tasks].sort((a, b) => a.id.localeCompare(b.id)))
+  expect((await (await page.request.get(tasksPath(other.id))).json()).tasks.find((task) => task.id === outside.id)).toEqual(outside)
+  expect((await (await page.request.get(`/api/assistant.php?workspace_id=${workspace.id}`)).json()).messages).toHaveLength(2)
+  const mixed = await askAI(page.request, workspace.id, toolMessage(toolCall('delete_tasks', [{ task_id: tasks[0].id }]), toolCall('edit_tasks', [{ task_id: tasks[1].id, title: 'Judul diperbarui' }]), toolCall('create_tasks', [{ title: 'Task tambahan', description: '' }])))
+  expect(mixed.status()).toBe(200)
+  const result = await mixed.json()
+  expect(result.deleted_tasks).toHaveLength(1)
+  expect(result.updated_tasks).toHaveLength(1)
+  expect(result.tasks).toHaveLength(1)
+  expect((await (await page.request.get(tasksPath(workspace.id))).json()).tasks).toHaveLength(3)
+})
+
+test('AI: target ambigu tidak berubah dan task yang berubah saat proses tidak dihapus', async ({ page }) => {
+  await register(page.request, 'ai-stale@example.com')
+  const workspace = await createWorkspace(page.request, 'AI Target')
+  const { tasks: [task] } = await (await askAI(page.request, workspace.id, 'buatkan task')).json()
+  await page.request.post(tasksPath(workspace.id), { data: { title: task.title, description: 'Task dengan nama sama' } })
+  const ambiguous = await askAI(page.request, workspace.id, 'Ubah task Riset kebutuhan perusahaan menjadi task lain')
+  expect(ambiguous.status()).toBe(200)
+  const response = await ambiguous.json()
+  expect(response.reply).toContain('Task mana')
+  expect(response.updated_tasks).toHaveLength(0)
+  expect((await askAI(page.request, workspace.id, `simulate_changed:${task.id}`)).status()).toBe(409)
+  const remaining = (await (await page.request.get(tasksPath(workspace.id))).json()).tasks
+  expect(remaining).toHaveLength(4)
+  expect(remaining.find((item) => item.id === task.id).title).toBe('Judul diubah anggota lain')
+})

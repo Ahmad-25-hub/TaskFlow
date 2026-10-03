@@ -1,5 +1,6 @@
 <?php
 declare(strict_types=1);
+require_once __DIR__ . '/env.php';
 
 function database(bool $selectDatabase = true): PDO {
     $host = getenv('TASKFLOW_DB_HOST') ?: '127.0.0.1';

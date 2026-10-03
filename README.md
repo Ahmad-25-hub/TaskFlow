@@ -41,7 +41,7 @@ Jalankan dua terminal dari folder proyek:
 
 ```powershell
 # Terminal 1: API PHP
-& 'C:\xampp\php\php.exe' -S 127.0.0.1:8000 -t .
+& 'C:\xampp\php\php.exe' -S 127.0.0.1:8000 -t . api/router.php
 ```
 
 ```powershell
@@ -124,3 +124,29 @@ Jalankan `npm run db:migrate` pada instalasi lama untuk menambahkan `completed_b
 Klik **Statistik** di header board untuk membuka halaman tersendiri. Halaman memuat total, selesai, belum selesai, task terlambat, progress, jumlah deadline dekat, grafik distribusi seluruh kolom (termasuk custom), kontribusi tiap anggota, dan detail task selesai beserta pembuat/penyelesai/waktu WIB. URL `#workspace=<id>&view=statistics` tetap dapat dibuka setelah reload. Gunakan **Perbarui statistik** untuk mengambil data terbaru dan **Kembali ke board** untuk kembali.
 
 Angka berasal dari task yang masih ada; task yang dihapus tidak masuk hitungan. Penyelesaian memakai pelaku terakhir pada task yang saat ini Done, bukan riwayat seluruh aktivitas. Anggota aktif tanpa kontribusi tetap ditampilkan, sedangkan pelaku lama dan data belum tercatat diberi keterangan. Data memakai endpoint task, kolom, dan anggota yang sudah dibatasi keanggotaan workspace. Tidak diperlukan migrasi tambahan.
+
+## Asisten AI Google AI Studio
+
+1. File `.env` sudah disiapkan di root proyek. Isi `GEMINI_API_KEY` dengan API key dari https://aistudio.google.com/apikey. Template tersedia di `.env.example`; pada checkout baru salin template menjadi `.env`.
+2. Model default `GEMINI_MODEL=gemini-3.5-flash-lite` dapat diganti dengan model Gemini yang tersedia untuk API key milikmu dan mendukung function calling.
+3. Jalankan `npm run db:migrate` untuk membuat tabel `ai_requests` (riwayat percakapan dan pencegahan task ganda saat retry). Task lama tetap utuh.
+4. Jalankan PHP dengan router: `C:\xampp\php\php.exe -S 127.0.0.1:8000 -t . api/router.php`, lalu `npm run dev`. Router memblokir file konfigurasi/backup dari akses publik. Jika menggunakan Apache XAMPP, pastikan `.htaccess` diproses.
+5. Login, buka workspace, klik **Asisten AI**. Contoh: "Saya ada project buat website profil untuk perusahaan, tolong buatkan tugas-tugasnya."
+
+AI dapat mengobrol, membuat, mengedit, dan menghapus task dengan maksimal 20 tindakan per pesan. Task langsung masuk To Do di workspace aktif, dibuat atas nama akun yang memberi perintah. Deadline hanya diminta ke model jika pengguna menyebutkannya. Chat dan hasil tindakan disimpan terpisah per akun/workspace; 12 giliran terakhir dimuat. Edit dapat mengubah judul, deskripsi, status (termasuk kolom custom), dan deadline. Field lain tetap utuh; pembuat dan waktu pembuatan tidak berubah. Memindahkan ke Done mencatat penyelesai dari session; edit pada task yang tetap Done mempertahankan catatan, dan membuka kembali membersihkannya.
+
+Koneksi menggunakan Gemini Interactions API dan tool `create_tasks`, `edit_tasks`, serta `delete_tasks`: model mengusulkan argumen, PHP memvalidasi lalu menyimpan seluruh batch dalam satu transaksi. Balasan keberhasilan berasal dari hasil simpan server. Request ID dipertahankan saat retry sehingga respons hilang setelah simpan tidak mengulang pembuatan, edit, atau penghapusan. Riwayat tidak memakai localStorage. API key hanya dibaca PHP, tidak memakai prefix `VITE_`, dan `.env` diabaikan Git.
+
+Pesan dan riwayat chat, nama/deskripsi workspace, ID/judul/deskripsi/status/deadline task workspace aktif, serta nama dan ID kolom dikirim ke Google sebagai konteks agar AI dapat memilih task yang sudah ada. Key, password, dan data workspace lain tidak dimasukkan. Request Google memakai `store: false`. Bila key belum diisi, UI menampilkan petunjuk konfigurasi. Kegagalan key/model, kuota, koneksi, dan respons AI ditampilkan tanpa menerapkan batch sebagian. ID target harus berasal dari konteks workspace aktif. Jika isi task berubah selama AI memproses permintaan, server menolak perubahan agar tidak menimpa pekerjaan anggota lain.
+
+`npm test` selalu menggunakan provider Gemini tiruan pada port 8002, key test, dan database sementara sehingga tidak menggunakan kuota atau key Google asli. Tes meliputi chat, konteks, pembuatan/edit/hapus task, retry, validasi batch, identitas pembuat/penyelesai, hak akses, target yang berubah, serta konfigurasi/backup. Koneksi dan kualitas jawaban model Google asli belum dapat diuji sebelum key diisi. Model/API bisa berubah; referensi resmi: https://ai.google.dev/api/interactions-api dan https://ai.google.dev/gemini-api/docs/models/gemini-3.5-flash-lite.
+
+
+Contoh perintah tambahan:
+- "Ubah judul task Riset menjadi Riset kebutuhan perusahaan."
+- "Pindahkan task Desain Homepage ke In Progress dan ubah deadline menjadi 20 November 2030."
+- "Hapus deadline task Desain Homepage."
+- "Hapus task Riset kebutuhan perusahaan."
+- "Hapus semua task yang sudah Done."
+
+Perintah edit/hapus langsung diterapkan pada workspace aktif. Sebutkan nama task dan pembeda seperti deskripsi atau status jika ada judul sama. Instruksi model meminta klarifikasi bila target ambigu; ketepatan penafsiran bahasa Google asli tetap perlu diuji setelah key diisi. Hasil chat menampilkan daftar task Dibuat, Diedit, dan Dihapus; board dimuat ulang setelah perubahan berhasil.

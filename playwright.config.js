@@ -17,7 +17,13 @@ export default defineConfig({
   },
   webServer: [
     {
-      command: `${process.env.TASKFLOW_PHP || (process.platform === 'win32' ? 'C:/xampp/php/php.exe' : 'php')} -S 127.0.0.1:8001 -t .`,
+      command: `${process.env.TASKFLOW_PHP || (process.platform === 'win32' ? 'C:/xampp/php/php.exe' : 'php')} -S 127.0.0.1:8002 -t tests/fixtures tests/fixtures/gemini.php`,
+      url: 'http://127.0.0.1:8002',
+      stderr: 'ignore',
+      reuseExistingServer: false,
+    },
+    {
+      command: `${process.env.TASKFLOW_PHP || (process.platform === 'win32' ? 'C:/xampp/php/php.exe' : 'php')} -S 127.0.0.1:8001 -t . api/router.php`,
       url: 'http://127.0.0.1:8001/api/auth.php',
       stderr: 'ignore',
       reuseExistingServer: false,

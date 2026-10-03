@@ -54,3 +54,16 @@ CREATE TABLE IF NOT EXISTS columns (
   PRIMARY KEY (workspace_id, id),
   CONSTRAINT fk_columns_workspace FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+CREATE TABLE IF NOT EXISTS ai_requests (
+  id CHAR(36) NOT NULL PRIMARY KEY,
+  workspace_id CHAR(36) NOT NULL,
+  user_id CHAR(36) NOT NULL,
+  prompt TEXT NOT NULL,
+  response_json MEDIUMTEXT NOT NULL,
+  created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  INDEX idx_ai_workspace_user (workspace_id, user_id, created_at),
+  FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

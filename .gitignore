@@ -24,3 +24,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Konfigurasi privat
+.env
+.env.*
+!.env.example

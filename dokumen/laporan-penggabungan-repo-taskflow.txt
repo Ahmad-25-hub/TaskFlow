@@ -592,3 +592,113 @@ Verifikasi: lint, build, dan seluruh 26 skenario pengujian berhasil. Screenshot 
 Kriteria selesai: perubahan warna/dokumentasi remote tergabung, riwayat edit lokal dipertahankan, seluruh progress belum di-commit dipulihkan, serta fungsi aplikasi lolos pengujian. Semua terpenuhi.
 
 Status: merge riwayat sudah menjadi commit lokal 87f342e. Progress pencatatan pelaku/statistik serta laporan masih berupa perubahan lokal. Tidak dilakukan push ke GitHub.
+
+22. ASISTEN AI GOOGLE AI STUDIO
+
+Tanggal: 3 Oktober 2026.
+Permintaan: menambahkan asisten yang dapat mengobrol dan menjalankan perintah untuk membuat daftar tugas dari ide proyek. API key akan diisi pengguna sendiri pada .env; template konfigurasi disediakan dalam .env.example.
+
+Tujuan dan kriteria selesai:
+- Tombol Asisten AI tersedia pada workspace dan membuka chat yang dapat digunakan pada desktop maupun ponsel.
+- Permintaan membuat tugas menghasilkan task yang benar-benar tersimpan pada workspace aktif, masuk To Do, dan tercatat dibuat oleh pengguna yang login.
+- Percakapan dan hasil tersimpan terpisah untuk masing-masing akun dan workspace.
+- File .env dibuat dengan key kosong, .env.example menyediakan template, dan PHP membaca konfigurasi tanpa memasukkan key ke bundle frontend.
+- Kegagalan provider atau isi task tidak menyebabkan sebagian batch tersimpan. Retry permintaan yang sama tidak membuat task ganda.
+- Fitur lama tetap berjalan, data taskflow dipertahankan, serta lint, build, dan pengujian berhasil.
+
+Pekerjaan yang dilakukan:
+1. Memeriksa struktur React, endpoint PHP, schema/migrasi, serta pola pengujian yang sudah ada sebelum menambahkan fitur.
+2. Menyiapkan GEMINI_API_KEY dan GEMINI_MODEL=gemini-3.5-flash-lite serta konfigurasi database XAMPP dalam .env dan .env.example. File .env diabaikan Git. Nilai lingkungan proses lebih diprioritaskan daripada isi file.
+3. Menambahkan endpoint assistant.php untuk mengambil percakapan serta menerima pesan. Login dan keanggotaan workspace diperiksa sebelum akses riwayat atau pembuatan task.
+4. Menghubungkan PHP ke Gemini Interactions API melalui cURL. Tool create_tasks menerima judul, deskripsi, dan deadline opsional; maksimal 20 task per permintaan. Deadline hanya diminta ke model bila disebutkan pengguna.
+5. Mengirim nama/deskripsi workspace, tanggal WIB, maksimal 50 judul/status task terbaru, dan 12 giliran percakapan sebagai konteks. Request Google memakai store:false. Identitas pembuat berasal dari session, bukan model.
+6. Memvalidasi seluruh task sebelum menyimpan batch dalam satu transaksi. Task dibuat memakai alur dan format data aplikasi yang sudah ada; pembuat langsung tampil pada kartu. Board dimuat ulang setelah task tersimpan.
+7. Menambahkan tabel ai_requests untuk menyimpan prompt, balasan, dan hasil task. ID permintaan digunakan untuk mengembalikan hasil sebelumnya ketika respons jaringan hilang setelah penyimpanan. Percakapan tidak menggunakan localStorage.
+8. Membuat modal chat dengan contoh perintah, tampilan loading, daftar task hasil, petunjuk saat key kosong, dan error koneksi/key/kuota/model. Asisten saat ini menyediakan chat dan pembuatan task; tindakan edit/hapus belum menjadi kemampuan AI.
+9. Menambahkan router server PHP lokal dan .htaccess agar file konfigurasi serta backup tidak tersedia sebagai file publik. Server lokal port 8000 sudah dijalankan ulang dengan router tersebut.
+10. Memperbarui README, konfigurasi pengujian, dan laporan ini. Menambahkan provider tiruan khusus pengujian agar tes tidak memakai key atau kuota Google asli.
+
+File baru:
+.env (lokal, diabaikan Git), .env.example, .htaccess, api/assistant.php, api/router.php, api/lib/env.php, api/lib/gemini.php, api/lib/tasks.php, src/api/assistant.js, src/components/AIAssistant.jsx, dan tests/fixtures/gemini.php.
+
+File diperbarui:
+.gitignore, README.md, api/lib/database.php, api/tasks.php, database/schema.sql, playwright.config.js, scripts/test.mjs, src/components/WorkspaceBoard.jsx, tests/workspaces.spec.js, serta laporan ini. Helper task dipindahkan ke api/lib/tasks.php agar API task dan asisten memakai validasi serta pembacaan data yang sama.
+
+Database dan server:
+Backup dibuat pada C:\lomba\TaskFlow\database\backup-before-ai.local sebelum migrasi. Migrasi ai_requests sudah diterapkan pada database taskflow. Pemeriksaan sebelum dan sesudah menunjukkan 2 akun, 1 workspace, dan 9 task tetap utuh; ai_requests masih kosong. Tes memakai database sementara yang dibersihkan setelah selesai. Frontend port 5173 dan API port 8000 merespons HTTP 200; akses langsung ke .env dan backup database merespons 404.
+
+Verifikasi:
+Seluruh 31 skenario browser/API berhasil, termasuk chat tanpa membuat task, riwayat setelah modal dibuka kembali, pembuatan task dan deadline, atribusi pembuat, isolasi workspace/akun, akses anggota, ID request yang dipakai ulang, respons jaringan hilang lalu retry, dan penolakan batch/provider yang tidak valid tanpa simpan sebagian. Lint, build produksi, sintaks PHP, dan pemeriksaan whitespace berhasil. Screenshot chat pada ponsel diperiksa.
+
+Cara mengaktifkan:
+- Isi GEMINI_API_KEY pada C:\lomba\TaskFlow\.env menggunakan key Google AI Studio.
+- Model dapat disesuaikan melalui GEMINI_MODEL bila diperlukan; model harus tersedia untuk key tersebut dan mendukung function calling.
+- Pada instalasi baru, salin .env.example menjadi .env dan jalankan npm run db:migrate.
+- Jalankan C:\xampp\php\php.exe -S 127.0.0.1:8000 -t . api/router.php serta npm run dev dari folder proyek.
+- Login, buka workspace, klik Asisten AI, dan tulis contoh: Saya ada project buat website profil untuk perusahaan, tolong buatkan tugas-tugasnya.
+
+Batas verifikasi:
+API key tetap kosong sesuai permintaan. Integrasi telah diuji dengan respons Gemini tiruan; koneksi terautentikasi dan kualitas jawaban Google asli belum diuji sebelum pengguna mengisi key. Referensi API dan model diperiksa dari dokumentasi resmi Google: https://ai.google.dev/api/interactions-api dan https://ai.google.dev/gemini-api/docs/models/gemini-3.5-flash-lite.
+
+Status: implementasi dan setup lokal selesai. Pengujian Google asli menunggu key pengguna. Tidak dilakukan commit atau push ke GitHub pada pekerjaan ini.
+
+23. AI UNTUK EDIT DAN HAPUS TASK
+
+Tanggal: 3 Oktober 2026.
+Tujuan: asisten dapat menjalankan perintah untuk mengedit atau menghapus task yang sudah ada pada workspace aktif, selain chat dan membuat task baru.
+
+Pekerjaan:
+- Menambahkan tool edit_tasks dan delete_tasks melalui api/lib/assistant-tools.php. Tool pembuatan tetap tersedia; total maksimal 20 tindakan per pesan.
+- Konteks model sekarang menyertakan ID, judul, deskripsi, status, dan deadline seluruh task workspace aktif serta ID/nama kolom. ID target harus berasal dari konteks tersebut; target workspace lain atau ID buatan ditolak server.
+- Edit menerima hanya judul, deskripsi, status, atau deadline yang diminta. Status custom didukung. Deadline dapat dikosongkan. Pembuat, waktu pembuatan, dan field yang tidak diedit tetap utuh.
+- Memakai validasi perubahan yang sama dengan edit manual melalui helper taskChanges. Pindah ke Done mencatat pengguna login sebagai penyelesai; edit task yang tetap Done mempertahankan pelaku/waktu, dan membuka kembali membersihkannya.
+- Model diinstruksikan menjalankan tindakan hanya atas perintah, dan meminta klarifikasi bila target atau perubahan ambigu. Ini instruksi model; ketepatan penafsiran bahasa provider asli belum menjadi bagian pengujian otomatis.
+- Seluruh target dan field divalidasi sebelum tindakan pertama ditulis. Batch campuran buat/edit/hapus disimpan dalam satu transaksi; satu bagian tidak valid membatalkan semuanya.
+- Jika judul/deskripsi/status/deadline target berubah selama model memproses pesan, tindakan ditolak dengan pesan agar pengguna mencoba lagi pada konteks terbaru.
+- Target yang sama tidak boleh diedit/dihapus beberapa kali dalam satu batch. Field identitas dan tindakan di luar daftar tool ditolak.
+- Hasil chat menampilkan daftar Dibuat, Diedit, dan Dihapus. Board dimuat ulang setelah semua jenis perubahan. Riwayat lama yang hanya memiliki task baru tetap kompatibel.
+- Request ID dan respons tersimpan digunakan kembali saat retry sehingga edit/penghapusan tidak diulang ketika respons terputus setelah simpan.
+- Menambahkan tes browser/API untuk edit parsial, deadline, status custom, atribusi pelaku, izin member, isolasi workspace, validasi batch, batas tindakan, target berubah, dan retry penghapusan.
+
+File terkait: api/assistant.php, api/lib/assistant-tools.php (baru), api/lib/tasks.php, api/tasks.php, src/components/AIAssistant.jsx, src/components/WorkspaceBoard.jsx, tests/fixtures/gemini.php, tests/workspaces.spec.js, README.md, dan laporan ini.
+
+Contoh penggunaan:
+Ubah judul task Riset menjadi Riset kebutuhan perusahaan.
+Pindahkan task Desain Homepage ke In Progress dan ubah deadline menjadi 20 November 2030.
+Hapus deadline task Desain Homepage.
+Hapus task Riset kebutuhan perusahaan.
+Hapus semua task yang sudah Done.
+
+Kriteria selesai: perintah edit/hapus tersedia, perubahan nyata tersimpan, board dan riwayat sesuai, perilaku pembuat/penyelesai terjaga, akses workspace dibatasi, retry tidak mengulang tindakan, dan pengujian berhasil. Implementasi selesai dan diverifikasi bersama penggabungan pada bagian 24. Tes provider memakai Gemini tiruan; panggilan terautentikasi ke Google tidak dilakukan oleh pengujian ini. Tidak membutuhkan perubahan .env atau migrasi tambahan di luar fitur AI sebelumnya.
+
+24. PENGGABUNGAN TEMA DAN ANIMASI TERBARU
+
+Tanggal: 3 Oktober 2026.
+Permintaan: memeriksa perubahan repository terbaru dan menggabungkannya dengan progress komputer lokal.
+HEAD sebelum penggabungan: 200bf05 - menambahkan sistem statistik.
+Remote terbaru: 15d50d9 - Add subtle interaction and Kanban move animations.
+Commit terkait: 30d2955 - Add persistent light and charcoal dark themes; 73f8d76 - Merge remote-tracking branch origin/main.
+
+Perubahan remote:
+- Tema terang dan charcoal gelap, tombol tema pada navbar, penyimpanan preferensi tema, serta penerapan tema awal sebelum halaman dirender.
+- Pembaruan warna permukaan, teks, form, kartu, modal, dan kolom pada tema gelap.
+- Animasi navigasi, tombol, modal, feedback, progress, serta perpindahan task/kolom; reduced motion dihormati.
+- Pembaruan dokumen bahasa desain serta pengujian tema dan animasi.
+
+Cara penggabungan:
+Progress lokal AI chat/buat/edit/hapus dan seluruh file baru dicadangkan menggunakan stash dengan nama Backup AI chat create edit delete sebelum gabung origin 15d50d9.
+Hash cadangan: e3f01cf61bd28ad38614dbbb2befeb2295bb3e2a.
+Remote diterapkan dengan fast-forward dari 200bf05 ke 15d50d9. Cadangan kemudian diterapkan kembali tanpa konflik; seluruh pengujian remote dan lokal dipertahankan. Stash tetap tersedia sebagai cadangan. File .env yang diabaikan Git tetap berada di komputer dan tidak dimasukkan ke stash/repository.
+
+Penyesuaian integrasi:
+Warna teks pesan pengguna dan petunjuk chat AI disesuaikan dengan aturan tema gelap remote agar tetap terbaca. README menjelaskan kemampuan AI terbaru. Salah satu assertion pengujian lokal diperbaiki untuk membandingkan task berdasarkan ID karena daftar dari API diurutkan menurut waktu, sedangkan respons pembuatan mengikuti urutan batch; tidak ada perubahan data akibat perbaikan tes ini.
+
+Verifikasi:
+Seluruh 37 skenario browser/API berhasil setelah penggabungan. Pengujian tambahan edit/hapus AI pada tema gelap berhasil, dan screenshot ponsel diperiksa. Lint, build, sintaks PHP terkait, serta pemeriksaan whitespace berhasil. Frontend 5173 dan endpoint auth PHP 8000 merespons HTTP 200; akses .env tetap 404. Tidak ada konflik tersisa. HEAD sama dengan origin/main pada 15d50d9.
+
+Database:
+Penggabungan tidak menjalankan migrasi pada database utama dan tidak mengubah data utama. Pemeriksaan baca pada saat penyelesaian menunjukkan 2 akun, 2 workspace, 23 task, dan 4 riwayat AI. Pengujian menggunakan database sementara terpisah dan membersihkannya setelah selesai.
+
+Kriteria selesai: perubahan tema/animasi terbaru tergabung, progress AI dan konfigurasi lokal dipertahankan, fitur lama serta baru lolos pengujian, dan aplikasi lokal tersedia. Semua terpenuhi.
+
+Status akhir: remote sudah tergabung di komputer; progress AI, README, pengujian lokal, dan laporan masih berupa perubahan lokal. Tidak melakukan commit tambahan atau push ke GitHub pada pekerjaan ini.
