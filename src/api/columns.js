@@ -11,11 +11,35 @@ async function columnRequest(path = '', options = {}) {
   })
   let result
   try { result = await response.json() } catch { throw new Error('Respons server tidak valid.') }
-  if (!response.ok) throw new Error(result.error || 'Permintaan gagal.')
+  if (!response.ok) {
+    const error = new Error(result.error || 'Permintaan gagal.')
+    error.status = response.status
+    throw error
+  }
   return result
 }
 
 export const columnApi = {
+  reorder: async (columns) => {
+    const reordered = columns.map((column, index) => ({ ...column, sort_order: index + 1 }))
+    try {
+      const data = await columnRequest('', {
+        method: 'PATCH',
+        body: JSON.stringify({ column_ids: reordered.map((column) => column.id) }),
+      })
+      try { localStorage.setItem('taskflow_columns', JSON.stringify(data.columns)) } catch {}
+      return data.columns
+    } catch (issue) {
+      if (issue.status && issue.status < 500) throw issue
+      // Sama seperti tambah kolom: simpan secara lokal ketika backend tidak tersedia.
+      try {
+        localStorage.setItem('taskflow_columns', JSON.stringify(reordered))
+      } catch {
+        throw new Error('Urutan kolom gagal disimpan. Periksa server atau penyimpanan browser.')
+      }
+      return reordered
+    }
+  },
   list: async () => {
     try {
       const data = await columnRequest()

@@ -18,6 +18,7 @@ export default function App() {
   const [query, setQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [notice, setNotice] = useState('')
+  const [isSavingColumnOrder, setIsSavingColumnOrder] = useState(false)
 
   const completed = tasks.filter((task) => task.status === 'done').length
   const progress = tasks.length ? Math.round((completed / tasks.length) * 100) : 0
@@ -80,6 +81,29 @@ export default function App() {
       setNotice(`Kolom “${label}” berhasil dihapus.`)
     } catch (issue) {
       setError(issue.message)
+    }
+  }
+
+  async function moveColumn(id, targetId, placement = 'before') {
+    if (isSavingColumnOrder) return
+    const moved = columns.find((column) => column.id === id)
+    if (!moved || id === targetId) return
+    const reordered = columns.filter((column) => column.id !== id)
+    const target = reordered.findIndex((column) => column.id === targetId)
+    if (target < 0) return
+    const targetIndex = target + (placement === 'after' ? 1 : 0)
+    reordered.splice(targetIndex, 0, moved)
+    if (reordered.every((column, index) => column.id === columns[index].id)) return
+    setIsSavingColumnOrder(true)
+    try {
+      const saved = await columnApi.reorder(reordered)
+      setColumns(saved)
+      setError('')
+      setNotice(`Urutan kolom “${moved.label}” berhasil diubah.`)
+    } catch (issue) {
+      setError(issue.message)
+    } finally {
+      setIsSavingColumnOrder(false)
     }
   }
 
@@ -148,6 +172,7 @@ export default function App() {
               <button
                 type="button"
                 className="secondary-button"
+                disabled={isSavingColumnOrder}
                 onClick={() => setIsAddColumnOpen(true)}
               >
                 <Columns3 size={15} />
@@ -188,12 +213,14 @@ export default function App() {
               onMoveTask={moveTask}
               onOpenAddColumn={() => setIsAddColumnOpen(true)}
               onDeleteColumn={deleteColumn}
+              onMoveColumn={moveColumn}
+              isSavingColumnOrder={isSavingColumnOrder}
               isFiltered={Boolean(query.trim()) || statusFilter !== 'all'}
             />
           )}
         </section>
         <footer className="mt-7 flex flex-col items-center justify-between gap-2 text-[11px] text-slate-400 sm:flex-row">
-          <p>Drag kartu antar kolom, gunakan pilihan status di kartu, atau tambahkan kolom baru sesuai alur tim.</p>
+          <p>Drag kartu antar kolom. Tarik judul kolom untuk mengatur urutan tahapan.</p>
           <p>Data tersimpan di database TaskFlow</p>
         </footer>
       </main>

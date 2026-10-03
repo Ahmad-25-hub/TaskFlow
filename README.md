@@ -45,5 +45,7 @@ npm test
 
 API mendukung:
 - Task: `GET /api/tasks.php`, `POST /api/tasks.php`, `PATCH /api/tasks.php?id=<uuid>`, dan `DELETE /api/tasks.php?id=<uuid>`.
-- Kolom: `GET /api/columns.php`, `POST /api/columns.php`, dan `DELETE /api/columns.php?id=<id>`.
+- Kolom: `GET /api/columns.php`, `POST /api/columns.php`, `PATCH /api/columns.php`, dan `DELETE /api/columns.php?id=<id>`.
+
+Tarik judul/ikon pegangan kolom lalu lepaskan di sisi sebelum atau sesudah kolom tujuan untuk mengatur urutan. Garis ungu menunjukkan posisi sisipan. Dengan keyboard, fokuskan judul kolom lalu gunakan tombol panah. Drag kolom memakai HTML Drag and Drop pada browser desktop; dukungan sentuhan mengikuti browser. Kolom tambahan dapat disisipkan di antara kolom utama dengan menggesernya. Urutan disimpan melalui PATCH dengan payload `{ "column_ids": ["todo", "in_progress", "review", "done"] }` (sertakan semua ID kolom yang ada). Ketika backend tidak tersedia, urutan disimpan di localStorage dan digunakan selama backend tetap tidak tersedia; urutan database kembali digunakan saat backend aktif. Tiga kolom utama tetap tidak dapat dihapus dan makna statusnya tidak berubah saat dipindahkan.
 

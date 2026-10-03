@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Plus } from 'lucide-react'
 import KanbanColumn from './KanbanColumn'
 import { TASK_STATUSES } from '../data/tasks'
@@ -12,9 +12,44 @@ export default function KanbanBoard({
   onMoveTask,
   onOpenAddColumn,
   onDeleteColumn,
+  onMoveColumn,
+  isSavingColumnOrder,
   isFiltered,
 }) {
   const [draggedId, setDraggedId] = useState(null)
+  const [draggedColumnId, setDraggedColumnId] = useState(null)
+  const [columnTarget, setColumnTarget] = useState(null)
+  const boardRef = useRef(null)
+
+  function endColumnDrag() {
+    setDraggedColumnId(null)
+    setColumnTarget(null)
+  }
+
+  function columnPlacement(event) {
+    const rect = event.currentTarget.getBoundingClientRect()
+    const horizontal = window.matchMedia('(min-width: 768px)').matches
+    return (horizontal ? event.clientX > rect.left + rect.width / 2 : event.clientY > rect.top + rect.height / 2) ? 'after' : 'before'
+  }
+
+  function dragOverColumn(event, id) {
+    if (!draggedColumnId || isSavingColumnOrder) return
+    event.preventDefault()
+    event.dataTransfer.dropEffect = 'move'
+    const placement = columnPlacement(event)
+    setColumnTarget(id === draggedColumnId ? null : { id, placement })
+    const rect = boardRef.current.getBoundingClientRect()
+    if (event.clientX > rect.right - 18) boardRef.current.scrollBy({ left: 12 })
+    else if (event.clientX < rect.left + 18) boardRef.current.scrollBy({ left: -12 })
+  }
+
+  function dropColumn(event, id) {
+    if (!draggedColumnId) return
+    event.preventDefault()
+    event.stopPropagation()
+    onMoveColumn(draggedColumnId, id, columnPlacement(event))
+    endColumnDrag()
+  }
 
   function dropTask(event, status) {
     event.preventDefault()
@@ -25,9 +60,14 @@ export default function KanbanBoard({
   }
 
   return (
-    <div className="flex flex-col md:flex-row items-stretch md:items-start gap-5 overflow-x-auto pb-4 pt-1">
-      {columns.map((status) => (
-        <div key={status.id} className="w-full md:min-w-[310px] md:flex-1 shrink-0">
+    <div ref={boardRef} className="flex flex-col md:flex-row items-stretch md:items-start gap-5 overflow-x-auto pb-4 pt-1">
+      <p id="column-drag-help" className="sr-only">Tarik judul kolom ke posisi tujuan. Dengan keyboard, fokuskan judul lalu gunakan tombol panah kiri atau kanan.</p>
+      {columns.map((status, index) => (
+        <div key={status.id} data-column-id={status.id}
+          className={`column-slot w-full md:min-w-[310px] md:flex-1 shrink-0 ${draggedColumnId === status.id ? 'column-dragging' : ''} ${columnTarget?.id === status.id ? `column-insert-${columnTarget.placement}` : ''}`}
+          onDragOver={(event) => dragOverColumn(event, status.id)}
+          onDragLeave={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setColumnTarget((current) => current?.id === status.id ? null : current) }}
+          onDrop={(event) => dropColumn(event, status.id)}>
           <KanbanColumn
             status={status}
             columns={columns}
@@ -38,6 +78,15 @@ export default function KanbanBoard({
             onMoveTask={onMoveTask}
             onDropTask={dropTask}
             onDeleteColumn={onDeleteColumn}
+            onColumnDragStart={setDraggedColumnId}
+            onColumnDragEnd={endColumnDrag}
+            onColumnKeyDown={(event) => {
+              const direction = event.key === 'ArrowLeft' || event.key === 'ArrowUp' ? -1 : event.key === 'ArrowRight' || event.key === 'ArrowDown' ? 1 : 0
+              if (!direction || isSavingColumnOrder || !columns[index + direction]) return
+              event.preventDefault()
+              onMoveColumn(status.id, columns[index + direction].id, direction < 0 ? 'before' : 'after')
+            }}
+            isSavingColumnOrder={isSavingColumnOrder}
             draggedId={draggedId}
             onDragChange={setDraggedId}
             isFiltered={isFiltered}
@@ -50,6 +99,7 @@ export default function KanbanBoard({
           <button
             type="button"
             onClick={onOpenAddColumn}
+            disabled={isSavingColumnOrder}
             aria-label="Tambah kolom baru"
             className="add-column-card flex flex-col items-center justify-center gap-3 w-full min-h-[140px] md:min-h-[465px] p-6 text-slate-400 group"
           >

@@ -76,6 +76,33 @@ try {
         respond(200, ['columns' => array_map('columnRow', $rows)]);
     }
 
+    if ($method === 'PATCH' && $id === null) {
+        $data = payload();
+        $ids = $data['column_ids'] ?? null;
+        if (!is_array($ids) || !array_is_list($ids) || count($ids) === 0 ||
+            count(array_filter($ids, 'is_string')) !== count($ids) ||
+            count(array_unique($ids)) !== count($ids)) {
+            respond(422, ['error' => 'Urutan harus berisi semua ID kolom tanpa duplikat.']);
+        }
+
+        $db->beginTransaction();
+        $existing = $db->query('SELECT id FROM columns ORDER BY id FOR UPDATE')->fetchAll(PDO::FETCH_COLUMN);
+        $sortedIds = $ids;
+        sort($sortedIds, SORT_STRING);
+        sort($existing, SORT_STRING);
+        if ($sortedIds !== $existing) {
+            $db->rollBack();
+            respond(422, ['error' => 'Daftar kolom berubah. Muat ulang halaman sebelum mengatur urutan.']);
+        }
+        $update = $db->prepare('UPDATE columns SET sort_order = ? WHERE id = ?');
+        foreach ($ids as $index => $columnId) {
+            $update->execute([$index + 1, $columnId]);
+        }
+        $rows = $db->query('SELECT id, label, description, color, sort_order FROM columns ORDER BY sort_order ASC, created_at ASC')->fetchAll();
+        $db->commit();
+        respond(200, ['columns' => array_map('columnRow', $rows)]);
+    }
+
     if ($method === 'POST' && $id === null) {
         $data = payload();
         $label = trim((string)($data['label'] ?? ''));
@@ -128,6 +155,7 @@ try {
 
     respond(405, ['error' => 'Metode tidak didukung.']);
 } catch (PDOException $error) {
+    if (isset($db) && $db->inTransaction()) $db->rollBack();
     error_log($error->getMessage());
     respond(500, ['error' => 'Koneksi atau operasi database gagal.']);
 }

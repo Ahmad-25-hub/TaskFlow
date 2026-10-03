@@ -35,6 +35,16 @@ button, a, input, select, textarea { outline-offset: 4px; }
 .column-add:hover { background: #ffffffa0; color: var(--column-text, #7270cf); }
 .column-delete { display: flex; align-items: center; justify-content: center; height: 25px; width: 25px; border-radius: 6px; color: #94a3b8; transition: background .15s, color .15s; }
 .column-delete:hover { background: #fee2e2; color: #ef4444; }
+.column-drag-handle { cursor: grab; user-select: none; border-radius: 5px; }
+.column-drag-handle:active { cursor: grabbing; }
+.column-drag-handle[aria-disabled="true"] { cursor: wait; }
+.column-slot { position: relative; }
+.column-dragging { opacity: .45; }
+.column-insert-before::before, .column-insert-after::after { content: ''; position: absolute; top: 0; bottom: 0; width: 4px; border-radius: 4px; background: #6366f1; pointer-events: none; }
+.column-insert-before::before { left: -12px; }
+.column-insert-after::after { right: -12px; }
+@media (max-width: 767px) { .column-insert-before::before, .column-insert-after::after { left: 0; right: 0; width: auto; height: 4px; bottom: auto; } .column-insert-before::before { top: -10px; } .column-insert-after::after { top: auto; bottom: -10px; } }
+button:disabled { cursor: not-allowed; opacity: .4; }
 .task-card { border: 1px solid #e7eaf0; border-radius: 10px; background: white; padding: 15px 16px 12px; box-shadow: 0 2px 3px #23314c03; cursor: grab; transition: box-shadow .15s, opacity .15s, transform .15s; }
 .task-card:hover { box-shadow: 0 5px 15px #23314c0a; transform: translateY(-2px); }
 .task-card:active { cursor: grabbing; }

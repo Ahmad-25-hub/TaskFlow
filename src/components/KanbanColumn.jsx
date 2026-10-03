@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { CircleDashed, CircleCheck, CircleDot, Plus, Trash2, Layers } from 'lucide-react'
+import { CircleDashed, CircleCheck, CircleDot, Plus, Trash2, Layers, GripVertical } from 'lucide-react'
 import TaskCard from './TaskCard'
 
 const icons = { todo: CircleDashed, in_progress: CircleDot, done: CircleCheck }
@@ -14,6 +14,10 @@ export default function KanbanColumn({
   onMoveTask,
   onDropTask,
   onDeleteColumn,
+  onColumnDragStart,
+  onColumnDragEnd,
+  onColumnKeyDown,
+  isSavingColumnOrder,
   draggedId,
   onDragChange,
   isFiltered,
@@ -35,10 +39,29 @@ export default function KanbanColumn({
       className={`kanban-column column-${status.color || 'indigo'} ${isOver && draggedId ? 'drop-active' : ''}`}
       onDragOver={handleDragOver}
       onDragLeave={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setIsOver(false) }}
-      onDrop={(event) => { setIsOver(false); onDropTask(event, status.id) }}
+      onDrop={(event) => { if (draggedId) { event.stopPropagation(); setIsOver(false); onDropTask(event, status.id) } }}
     >
       <div className="mb-1 flex items-center justify-between">
-        <div className="flex items-center gap-2.5 min-w-0 pr-2">
+        <div className="column-drag-handle flex items-center gap-2 min-w-0 pr-2"
+          data-column-handle={status.id}
+          draggable={!isSavingColumnOrder}
+          tabIndex={0}
+          aria-label={`Atur urutan kolom ${status.label}`}
+          aria-describedby="column-drag-help"
+          aria-disabled={isSavingColumnOrder}
+          title="Tarik untuk memindahkan kolom"
+          onKeyDown={onColumnKeyDown}
+          onDragStart={(event) => {
+            if (isSavingColumnOrder) { event.preventDefault(); return }
+            event.stopPropagation()
+            event.dataTransfer.setData('application/x-taskflow-column', status.id)
+            event.dataTransfer.effectAllowed = 'move'
+            const section = event.currentTarget.closest('section')
+            event.dataTransfer.setDragImage(section, 30, 25)
+            onColumnDragStart(status.id)
+          }}
+          onDragEnd={onColumnDragEnd}>
+          <GripVertical size={14} className="shrink-0 text-slate-400" aria-hidden="true" />
           <StatusIcon size={17} className="column-icon shrink-0" />
           <h3 className="text-sm font-bold truncate" title={status.label}>{status.label}</h3>
           <span className="column-count shrink-0">{isFiltered ? `${tasks.length}/${totalCount}` : totalCount}</span>
@@ -49,6 +72,7 @@ export default function KanbanColumn({
               type="button"
               aria-label={`Hapus kolom ${status.label}`}
               className="column-delete"
+              disabled={isSavingColumnOrder}
               onClick={() => onDeleteColumn(status.id, status.label)}
               title="Hapus kolom ini"
             >

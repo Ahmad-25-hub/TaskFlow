@@ -6,8 +6,9 @@ const installedEdge = process.platform === 'win32' && existsSync('C:/Program Fil
 
 export default defineConfig({
   testDir: './tests',
-  fullyParallel: true,
-  workers: 3,
+  // Tes integrasi memakai papan database yang sama; hindari perubahan kolom bersamaan.
+  fullyParallel: false,
+  workers: 1,
   use: {
     baseURL: 'http://127.0.0.1:5173',
     browserName: 'chromium',
