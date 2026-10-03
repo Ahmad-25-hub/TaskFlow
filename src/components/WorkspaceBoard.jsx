@@ -8,6 +8,7 @@ import { columnApi } from '../api/columns'
 import { taskApi } from '../api/tasks'
 
 export default function WorkspaceBoard({ workspace, onBack, onUpdated }) {
+  const [now, setNow] = useState(() => new Date())
   const [showSettings, setShowSettings] = useState(false)
   const [tasks, setTasks] = useState([])
   const [columns, setColumns] = useState([])
@@ -38,6 +39,11 @@ export default function WorkspaceBoard({ workspace, onBack, onUpdated }) {
       .finally(() => { if (!controller.signal.aborted) setLoading(false) })
     return () => controller.abort()
   }, [workspace.id])
+
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 60000)
+    return () => clearInterval(timer)
+  }, [])
 
   useEffect(() => {
     if (!notice) return
@@ -127,6 +133,19 @@ export default function WorkspaceBoard({ workspace, onBack, onUpdated }) {
     finally { pendingRef.current.delete(id); setPendingIds(new Set(pendingRef.current)) }
   }
 
+  async function updateDeadline(id, deadline) {
+    if (deletingColumnRef.current || pendingRef.current.has(id)) return false
+    pendingRef.current.add(id); setPendingIds(new Set(pendingRef.current))
+    try {
+      const updated = await taskApi.deadline(workspace.id, id, deadline)
+      setTasks((current) => current.map((task) => task.id === id ? updated : task))
+      setError('')
+      setNotice(deadline ? 'Deadline berhasil diperbarui.' : 'Deadline berhasil dihapus.')
+      return true
+    } catch (issue) { setError(issue.message); return false }
+    finally { pendingRef.current.delete(id); setPendingIds(new Set(pendingRef.current)) }
+  }
+
   async function moveTask(id, status) {
     if (deletingColumnRef.current || pendingRef.current.has(id) || !columns.some((item) => item.id === status)) return
     pendingRef.current.add(id); setPendingIds(new Set(pendingRef.current))
@@ -175,7 +194,7 @@ export default function WorkspaceBoard({ workspace, onBack, onUpdated }) {
             </div>
           </div>
           {error && <p role="alert" className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
-          {loading ? <p className="py-8 text-center text-sm text-slate-500">Memuat task...</p> : <KanbanBoard onMoveColumn={moveColumn} isSavingColumnOrder={isSavingColumnOrder} columns={columns} onOpenAddColumn={() => { setError(''); setShowAddColumn(true) }} onDeleteColumn={deleteColumn} tasks={filteredTasks} allTasks={tasks} pendingIds={pendingIds} onAddTask={setModalStatus} onDeleteTask={deleteTask} onMoveTask={moveTask} isFiltered={Boolean(query.trim()) || statusFilter !== 'all'} />}
+          {loading ? <p className="py-8 text-center text-sm text-slate-500">Memuat task...</p> : <KanbanBoard now={now} onMoveColumn={moveColumn} isSavingColumnOrder={isSavingColumnOrder} columns={columns} onOpenAddColumn={() => { setError(''); setShowAddColumn(true) }} onDeleteColumn={deleteColumn} tasks={filteredTasks} allTasks={tasks} pendingIds={pendingIds} onAddTask={setModalStatus} onDeleteTask={deleteTask} onMoveTask={moveTask} onUpdateDeadline={updateDeadline} isFiltered={Boolean(query.trim()) || statusFilter !== 'all'} />}
         </section>
         <footer className="mt-4 text-xs text-slate-500">
           <p>Seret kartu untuk mengubah status. Seret judul kolom untuk mengatur urutan.</p>

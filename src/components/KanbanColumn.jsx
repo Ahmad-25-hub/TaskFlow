@@ -5,6 +5,7 @@ import TaskCard from './TaskCard'
 const icons = { todo: CircleDashed, in_progress: CircleDot, done: CircleCheck }
 
 export default function KanbanColumn({
+  now,
   pendingIds = new Set(),
   status,
   columns,
@@ -13,6 +14,7 @@ export default function KanbanColumn({
   onAddTask,
   onDeleteTask,
   onMoveTask,
+  onUpdateDeadline,
   onDropTask,
   onDeleteColumn,
   onColumnDragStart,
@@ -96,10 +98,12 @@ export default function KanbanColumn({
           <TaskCard
             key={task.id}
             isBusy={pendingIds.has(task.id)}
+            now={now}
             task={task}
             columns={columns}
             onDelete={onDeleteTask}
             onMove={onMoveTask}
+            onUpdateDeadline={onUpdateDeadline}
             onDragChange={onDragChange}
             isDragging={draggedId === task.id}
           />

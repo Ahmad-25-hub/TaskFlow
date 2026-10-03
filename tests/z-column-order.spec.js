@@ -42,6 +42,10 @@ test('kolom tambahan bisa disisipkan, urutan tersimpan, dan API menolak daftar t
     const created = await request.post(endpoint, { data: { label: name, color: 'rose' } })
     expect(created.status()).toBe(201)
     id = (await created.json()).column.id
+    const taskEndpoint = `/api/tasks.php?workspace_id=${workspace.id}`
+    const taskResponse = await request.post(taskEndpoint, { data: { title: 'Deadline saat urut kolom', description: '', status: id, deadline: '2030-01-01' } })
+    expect(taskResponse.status()).toBe(201)
+    const task = (await taskResponse.json()).task
     await page.goto(`/#workspace=${workspace.id}`)
     const expected = [...initial.map((column) => column.label), name]
     await expect(labels(page)).toHaveText(expected)
@@ -52,6 +56,17 @@ test('kolom tambahan bisa disisipkan, urutan tersimpan, dan API menolak daftar t
     await expect(labels(page)).toHaveText(expected)
     await page.reload()
     await expect(labels(page)).toHaveText(expected)
+    const card = page.getByRole('article', { name: task.title })
+    await expect(page.locator(`[data-column-id="${id}"]`).getByRole('article', { name: task.title })).toBeVisible()
+    await expect(card).toContainText('1 Jan 2030')
+    await card.getByRole('button', { name: `Ubah deadline ${task.title}` }).click()
+    await card.getByLabel(`Deadline ${task.title}`, { exact: true }).fill('2031-01-01')
+    await card.getByRole('button', { name: 'Simpan deadline' }).click()
+    await expect(card).toContainText('1 Jan 2031')
+    await expect(labels(page)).toHaveText(expected)
+    const savedTask = (await (await request.get(taskEndpoint)).json()).tasks.find((item) => item.id === task.id)
+    expect(savedTask.status).toBe(id)
+    expect(savedTask.deadline).toBe('2031-01-01')
     const saved = (await (await request.get(endpoint)).json()).columns
     expect(saved.map((column) => column.label)).toEqual(expected)
     expect(saved.map((column) => column.sort_order)).toEqual(saved.map((_, index) => index + 1))
