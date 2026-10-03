@@ -34,7 +34,7 @@ export default function App() {
 
   if (user) return <WorkspaceShell key={user.id} user={user} onLogout={logout} />
   return (
-    <div className="min-h-screen bg-[#f6f8fb] text-slate-800">
+    <div className="app-page">
       <Navbar />
       {loading ? <div className="page-loading"><LoaderCircle className="animate-spin" size={22} />Menyiapkan ruang kerjamu...</div> : error ? (
         <main className="mx-auto max-w-lg px-5 py-20 text-center">

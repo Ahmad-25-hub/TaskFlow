@@ -1,9 +1,11 @@
 import { useState } from 'react'
-import { PanelsTopLeft, LoaderCircle, LogOut } from 'lucide-react'
+import { PanelsTopLeft, LoaderCircle, LogOut, Moon, Sun } from 'lucide-react'
+import { useTheme } from '../theme-context'
 
 export default function Navbar({ user, onHome, onLogout }) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const { theme, toggleTheme } = useTheme()
   const initials = user ? user.name.split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase() : 'TF'
   async function logout() {
     setBusy(true); setError('')
@@ -18,6 +20,10 @@ export default function Navbar({ user, onHome, onLogout }) {
         </button>
         <div className="flex items-center gap-3">
           {user && <button type="button" onClick={onHome} className="nav-workspaces">Workspace</button>}
+          <button type="button" onClick={toggleTheme} className="theme-toggle" aria-label={theme === 'dark' ? 'Aktifkan mode terang' : 'Aktifkan mode gelap'} title={theme === 'dark' ? 'Aktifkan mode terang' : 'Aktifkan mode gelap'}>
+            {theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}
+            <span className="hidden sm:inline">{theme === 'dark' ? 'Mode terang' : 'Mode gelap'}</span>
+          </button>
           <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[#e7eff6] text-xs font-bold text-[#285572]" aria-label={user ? `Akun ${user.name}` : 'Workspace TaskFlow'}>{initials}</span>
           {user && <><span className="hidden max-w-36 truncate text-xs font-medium text-slate-600 sm:block">{user.name}</span><button type="button" disabled={busy} onClick={logout} aria-label="Keluar" className="nav-logout">{busy ? <LoaderCircle size={16} className="animate-spin" /> : <LogOut size={16} />}<span className="hidden sm:inline">Keluar</span></button></>}
         </div>

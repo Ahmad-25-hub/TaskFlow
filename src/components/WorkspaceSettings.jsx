@@ -34,7 +34,7 @@ export default function WorkspaceSettings({ workspace, onClose, onUpdated }) {
       {message && <p role="status" className="mb-4 rounded-lg bg-emerald-50 p-3 text-xs text-emerald-700">{message}</p>}
       <div className="rounded-lg border border-blue-100 bg-blue-50/60 p-4">
         <p className="text-xs font-semibold text-slate-600">Kode undangan</p>
-        <div className="mt-2 flex items-center justify-between gap-3"><code className="select-all text-xl font-bold tracking-[0.15em] text-blue-700" data-testid="invite-code">{workspace.invite_code}</code><button type="button" className="secondary-button !bg-white" disabled={busy} onClick={() => action(() => navigator.clipboard.writeText(workspace.invite_code), 'Kode undangan disalin.')}><Copy size={14} />Salin</button></div>
+        <div className="mt-2 flex items-center justify-between gap-3"><code className="select-all text-xl font-bold tracking-[0.15em] text-blue-700" data-testid="invite-code">{workspace.invite_code}</code><button type="button" className="secondary-button" disabled={busy} onClick={() => action(() => navigator.clipboard.writeText(workspace.invite_code), 'Kode undangan disalin.')}><Copy size={14} />Salin</button></div>
         <p className="mt-2 text-[11px] leading-5 text-slate-500">Bagikan kode ini agar temanmu bisa bergabung.</p>
         {owner && <button type="button" disabled={busy} className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-blue-700" onClick={() => action(async () => onUpdated(await workspaceApi.rotateInvite(workspace.id)), 'Kode baru siap dibagikan. Kode lama tidak berlaku.')}><RefreshCw size={12} />Buat kode baru</button>}
       </div>

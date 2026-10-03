@@ -19,7 +19,7 @@ Referensi pola interaksi adalah papan Kanban modern: kolom menunjukkan tahap,
 kartu menunjukkan pekerjaan, dan pengguna dapat memindahkan kartu antar tahap.
 TaskFlow tetap memakai identitasnya sendiri, tanpa menyalin tampilan produk lain.
 
-2. WARNA DASAR
+2. WARNA DASAR (LIGHT MODE)
 
 Latar aplikasi       #F7F8FA   abu sangat muda; membuat area kerja terasa ringan.
 Permukaan kartu      #FFFFFF   kontras untuk isi task, form, dan dialog.
@@ -132,3 +132,27 @@ Sumber implementasi saat ini:
 Catatan: aturan desain yang aktif pada stylesheet berada di bagian akhir
 src/index.css, setelah komentar "TaskFlow product UI". Jika stylesheet
 dirapikan kemudian, pertahankan nilai warna dan perilaku di dokumen ini.
+
+9. LIGHT MODE DAN DARK MODE
+
+Pengguna dapat mengganti tema melalui tombol di navigasi. Pilihannya tersimpan
+di browser sehingga tetap berlaku setelah halaman dimuat ulang, termasuk di
+layar masuk, daftar workspace, papan, dan dialog. Saat belum ada pilihan yang
+tersimpan, TaskFlow mengikuti preferensi warna sistem pengguna.
+
+Dark mode memakai permukaan charcoal yang netral dan benar-benar gelap,
+tanpa dominasi navy:
+- Latar aplikasi #101113.
+- Navigasi #181A1D.
+- Panel dan kartu workspace #1E2125.
+- Kartu task #272B30.
+- Teks utama #E9EAED; teks pendukung lebih redup tetapi tetap terbaca.
+- Aksi utama memakai biru #287FC0 dengan respons hover #398FD0.
+
+Kolom dalam dark mode tetap menggunakan keluarga warna yang sama dengan light
+mode, tetapi latarnya dibuat lebih gelap dan aksennya lebih terang:
+To Do #1D272F, In Progress #2B271F, Done #202B26, Rose #2E2428,
+Purple #29252E, Sky #20292D, Teal #202B2A, Orange #2E2822, dan
+Slate #282B2F. Kartu task berada satu tingkat lebih terang dari latar kolom
+agar batas dan isi kartu tetap jelas. Status selalu disertai teks, jadi arti
+tahap tidak bergantung pada warna saja.
