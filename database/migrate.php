@@ -12,12 +12,17 @@ foreach (['workspace_id', 'created_by'] as $column) {
 }
 $hasDeadline = $db->query("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'tasks' AND COLUMN_NAME = 'deadline'")->fetchColumn();
 if (!$hasDeadline) $db->exec('ALTER TABLE tasks ADD COLUMN deadline DATE NULL');
+foreach (['completed_by' => 'CHAR(36)', 'completed_at' => 'DATETIME(3)'] as $column => $type) {
+    $stmt = $db->prepare("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'tasks' AND COLUMN_NAME = ?");
+    $stmt->execute([$column]);
+    if (!$stmt->fetchColumn()) $db->exec("ALTER TABLE tasks ADD COLUMN $column $type NULL");
+}
 $legacyId = '00000000-0000-4000-8000-000000000000';
 $db->prepare('INSERT IGNORE INTO workspaces (id, name, description, invite_code) VALUES (?, ?, ?, ?)')->execute([$legacyId, 'TaskFlow Hackathon', 'Workspace awal untuk task yang sudah ada.', strtoupper(bin2hex(random_bytes(4)))]);
 $db->prepare('UPDATE tasks SET workspace_id = ? WHERE workspace_id IS NULL')->execute([$legacyId]);
 $nullable = $db->query("SELECT IS_NULLABLE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'tasks' AND COLUMN_NAME = 'workspace_id'")->fetchColumn();
 if ($nullable === 'YES') $db->exec('ALTER TABLE tasks MODIFY workspace_id CHAR(36) NOT NULL');
-foreach (['fk_tasks_workspace' => 'FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE', 'fk_tasks_creator' => 'FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL'] as $constraintName => $definition) {
+foreach (['fk_tasks_workspace' => 'FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE', 'fk_tasks_completer' => 'FOREIGN KEY (completed_by) REFERENCES users(id) ON DELETE SET NULL', 'fk_tasks_creator' => 'FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL'] as $constraintName => $definition) {
     $stmt = $db->prepare('SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE CONSTRAINT_SCHEMA = DATABASE() AND TABLE_NAME = \'tasks\' AND CONSTRAINT_NAME = ?');
     $stmt->execute([$constraintName]);
     if (!$stmt->fetchColumn()) $db->exec("ALTER TABLE tasks ADD CONSTRAINT $constraintName $definition");

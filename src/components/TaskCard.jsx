@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { deadlineInfo } from '../utils/deadline'
-import { CalendarDays, ChevronDown, GripVertical, Pencil, Trash2 } from 'lucide-react'
+import { CalendarDays, ChevronDown, GripVertical, Pencil, Trash2, UserRound, CircleCheck } from 'lucide-react'
 import { TASK_STATUSES } from '../data/tasks'
 
 const dateFormatter = new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short', timeZone: 'Asia/Jakarta' })
@@ -38,7 +38,13 @@ export default function TaskCard({ columns = TASK_STATUSES, task, onEdit, onDele
           }}>
             <label htmlFor={`deadline-${task.id}`} className="block text-xs font-semibold text-slate-600">Deadline {task.title}</label>
             <input autoFocus type="date" id={`deadline-${task.id}`} min="1000-01-01" max="9999-12-31" disabled={isBusy} value={draftDeadline} onChange={(event) => setDraftDeadline(event.target.value)} className="field mt-2 w-full min-w-0 px-2 py-2 text-xs" />
-            <div className="mt-3 flex flex-wrap gap-2 text-xs">
+            <div className="mt-3 space-y-1.5 text-[11px] leading-5 text-slate-500">
+        <p className="flex items-start gap-1.5"><UserRound size={12} className="mt-1 shrink-0" /><span className="min-w-0 break-words">Dibuat oleh: <span className="font-medium text-slate-700">{task.creator_name || 'Belum tercatat'}</span></span></p>
+        {task.status === 'done' && (
+          <div className="flex items-start gap-1.5 text-emerald-700"><CircleCheck size={12} className="mt-1 shrink-0" /><div className="min-w-0 break-words"><p>Diselesaikan oleh: <span className="font-medium">{task.completer_name || 'Belum tercatat'}</span></p>{task.completed_at && <time dateTime={task.completed_at}>{new Intl.DateTimeFormat('id-ID', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Jakarta' }).format(new Date(task.completed_at))} WIB</time>}</div></div>
+        )}
+      </div>
+      <div className="mt-3 flex flex-wrap gap-2 text-xs">
               <button type="submit" disabled={isBusy} className="font-semibold text-blue-700">{isBusy ? 'Menyimpan...' : 'Simpan deadline'}</button>
               {task.deadline && <button type="button" disabled={isBusy} className="text-rose-600" onClick={async () => { if (await onUpdateDeadline(task.id, null)) setEditingDeadline(false) }}>Hapus deadline</button>}
               <button type="button" disabled={isBusy} className="text-slate-500" onClick={() => setEditingDeadline(false)}>Batal</button>
@@ -49,6 +55,12 @@ export default function TaskCard({ columns = TASK_STATUSES, task, onEdit, onDele
             <CalendarDays size={12} />
             {deadline ? <><span>{deadline.label}</span><span aria-hidden="true">·</span><time dateTime={task.deadline}>{deadline.date}</time></> : 'Tambah deadline'}
           </button>
+        )}
+      </div>
+      <div className="mt-3 space-y-1.5 text-[11px] leading-5 text-slate-500">
+        <p className="flex items-start gap-1.5"><UserRound size={12} className="mt-1 shrink-0" /><span className="min-w-0 break-words">Dibuat oleh: <span className="font-medium text-slate-700">{task.creator_name || 'Belum tercatat'}</span></span></p>
+        {task.status === 'done' && (
+          <div className="flex items-start gap-1.5 text-emerald-700"><CircleCheck size={12} className="mt-1 shrink-0" /><div className="min-w-0 break-words"><p>Diselesaikan oleh: <span className="font-medium">{task.completer_name || 'Belum tercatat'}</span></p>{task.completed_at && <time dateTime={task.completed_at}>{new Intl.DateTimeFormat('id-ID', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Jakarta' }).format(new Date(task.completed_at))} WIB</time>}</div></div>
         )}
       </div>
       <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3">

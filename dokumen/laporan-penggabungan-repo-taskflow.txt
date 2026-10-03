@@ -518,3 +518,77 @@ Hasil verifikasi:
 Kriteria selesai: desain terbaru tergabung, semua progress lokal tetap tersedia, konflik terselesaikan, aplikasi dapat dijalankan, dan pengujian fungsi berhasil. Semua kriteria terpenuhi.
 
 Status terbaru menggantikan catatan status lokal pada bagian 17: HEAD lokal sekarang 09cbd7b. Hasil integrasi edit task dan pembaruan laporan tetap berupa perubahan lokal. Pekerjaan ini tidak melakukan commit atau push ke GitHub.
+
+19. NAMA PEMBUAT DAN PENYELESAI TASK
+
+Tanggal: 3 Oktober 2026.
+Tujuan: anggota dapat melihat siapa yang membuat task dan siapa yang terakhir menyelesaikannya tanpa mencampur identitas pembuat dengan pelaksana penyelesaian.
+
+Pekerjaan:
+- API task mengambil creator_name melalui created_by dan completer_name melalui completed_by dengan LEFT JOIN users.
+- Menambahkan completed_by dan completed_at pada schema serta migrasi yang dapat dijalankan ulang. completed_by berelasi ke users; jika akun dihapus, ID penyelesai menjadi null dan waktu tetap tersedia.
+- Saat task dibuat langsung di Done, server mencatat pembuat sebagai penyelesai beserta waktu selesai.
+- Saat status berubah ke Done, server mencatat pengguna yang login dan waktu UTC; input identitas/waktu dari client tidak digunakan.
+- Edit judul/deskripsi/deadline atau penyimpanan status Done yang tidak berubah tidak menimpa penyelesai/waktu sebelumnya.
+- Saat task keluar dari Done, completed_by dan completed_at dikosongkan. Penyelesaian berikutnya mencatat pelaku terakhir.
+- Penghapusan kolom custom yang memindahkan task ke To Do juga membersihkan informasi penyelesaian.
+- Kartu menampilkan Dibuat oleh dan, pada Done, Diselesaikan oleh beserta tanggal/jam WIB.
+- Task lama yang tidak memiliki identitas atau waktu menampilkan Belum tercatat. Migrasi tidak mengarang riwayat penyelesaian lama; pembuat tetap mengikuti data created_by yang sudah ada.
+- Nama tetap dapat dibaca setelah anggota dikeluarkan dari workspace selama akunnya masih ada.
+
+File terkait:
+api/tasks.php, api/columns.php, database/schema.sql, database/migrate.php, src/components/TaskCard.jsx, tests/migration.php, tests/workspaces.spec.js, README.md, dan laporan ini.
+
+Verifikasi:
+Seluruh 23 pengujian browser/API berhasil pada pengujian penuh. Pengujian tambahan mencakup pembuat dan penyelesai berbeda, persistensi, identitas tidak dapat dipalsukan melalui payload, edit Done tidak mengubah waktu/pelaku, buka ulang dan selesai lagi, pembuatan langsung Done, nama anggota yang dikeluarkan, serta fallback data lama. Pengujian migrasi memastikan informasi penyelesaian task lama tetap null. Lint, build, sintaks PHP, dan pemeriksaan whitespace berhasil.
+
+Backup database sebelum migrasi:
+C:\lomba\TaskFlow\database\backup-before-task-attribution.local
+Migrasi diterapkan pada taskflow; 2 akun, 1 workspace, dan 9 task tetap dipertahankan. Seluruh 9 task lama belum memiliki catatan penyelesaian dari fitur baru.
+
+Kriteria selesai: nama pembuat tampil, pelaku/waktu selesai dicatat server, buka ulang membersihkan catatan, data tersimpan setelah reload, data lama utuh, dan pengujian berhasil. Semua terpenuhi. Hasil pekerjaan tetap lokal; tidak melakukan commit atau push pada pekerjaan ini.
+
+20. HALAMAN STATISTIK WORKSPACE
+
+Tujuan: menyediakan tombol yang membuka halaman statistik terpisah agar kontribusi tim dan detail penyelesaian tidak hanya terlihat pada kartu.
+
+Implementasi:
+- Tombol Statistik di header board membuka #workspace=<id>&view=statistics.
+- WorkspaceShell menangani halaman statistik, reload URL, tombol kembali ke board, dan navigasi browser.
+- WorkspaceStatistics mengambil task, kolom, dan anggota melalui API workspace yang sudah ada, dengan loading, error, coba lagi, serta tombol Perbarui statistik.
+- Ringkasan menampilkan total, selesai, belum selesai, terlambat, progress, deadline dekat, dan task tanpa deadline.
+- Grafik menampilkan jumlah task di seluruh kolom, termasuk kolom custom.
+- Tabel kontribusi menampilkan task dibuat dan diselesaikan per orang, termasuk anggota aktif tanpa task, pelaku lama di luar anggota aktif, serta data belum tercatat.
+- Detail task selesai menampilkan judul, pembuat, penyelesai, dan waktu WIB; diurutkan dari penyelesaian terbaru.
+- Perhitungan menggunakan task yang masih ada dan pelaku terakhir pada task yang saat ini Done. Ini bukan log riwayat semua aktivitas; catatan yang sudah dihapus/dibuka ulang tidak dihitung sebagai penyelesaian aktif.
+- Tampilan kosong tidak membagi dengan nol. Kegagalan API tidak ditampilkan sebagai angka nol palsu atau data lama seolah terbaru.
+- Penanda deadline menggunakan WIB dan waktu acuan diperbarui setiap menit. Data server dimuat ulang melalui tombol refresh atau ketika halaman dibuka kembali.
+- Tidak diperlukan tabel, endpoint, atau migrasi baru untuk halaman ini.
+
+File baru: src/components/WorkspaceStatistics.jsx dan src/utils/statistics.js.
+File diperbarui: WorkspaceBoard.jsx, WorkspaceShell.jsx, tests/workspaces.spec.js, README.md, dan laporan ini.
+
+Verifikasi: seluruh 26 pengujian berhasil, termasuk hitungan status custom, data lama, perbedaan pembuat/penyelesai, navigasi, reload, refresh, isolasi workspace, halaman kosong, kegagalan API, dan viewport 320/390/768 piksel. Lint serta build berhasil dan screenshot desktop diperiksa. Pengujian memakai database sementara; data taskflow tidak diubah oleh fitur ini.
+
+Kriteria selesai: tombol tersedia, halaman detail terbuka dan bisa kembali, hitungan sesuai workspace, tabel kontribusi/detail selesai terbaca, error dan keadaan kosong ditangani, serta pengujian berhasil. Semua terpenuhi. Perubahan masih lokal; tidak melakukan commit atau push.
+
+21. PENGGABUNGAN WARNA KOLOM DAN DOKUMEN DESAIN
+
+Tanggal: 3 Oktober 2026.
+Permintaan: memeriksa repository terbaru dan menggabungkannya dengan progress lokal.
+Remote terbaru: 57370f9 - Color Kanban columns and document design language.
+Perubahan remote: warna latar/border/hover/drop pada seluruh tema kolom di src/index.css serta dokumen dokumen/bahasa-desain-taskflow.txt.
+
+Branch lokal memiliki commit edit task 5d0f602 yang belum terdapat pada branch remote. Karena riwayat bercabang, penggabungan dilakukan dengan merge biasa dan menghasilkan commit lokal 87f342e; bukan fast-forward yang dapat mengganti basis tanpa menggabungkan kedua riwayat.
+
+Progress pencatatan pelaku task, halaman statistik, pengujian, dan laporan disimpan dahulu melalui stash:
+Backup statistik dan pelaku task sebelum gabung warna kolom 57370f9
+Hash: 24c652e7bd8616258003360f6fb604757672ae6b
+
+Merge remote berhasil tanpa konflik. Stash kemudian diterapkan kembali dan dipertahankan sebagai backup. Edit task tetap tersedia, begitu juga login, workspace, deadline, identitas pembuat/penyelesai, urutan kolom, dan halaman statistik. Dokumen bahasa desain dari remote ikut tersedia.
+
+Verifikasi: lint, build, dan seluruh 26 skenario pengujian berhasil. Screenshot board diperiksa untuk memastikan warna baru terlihat bersama tombol edit dan statistik. Frontend dan API merespons HTTP 200. Tidak ada konflik atau kesalahan whitespace. Tidak dilakukan migrasi atau perubahan data utama pada penggabungan ini; pemeriksaan baca menunjukkan 2 akun, 1 workspace, dan 9 task.
+
+Kriteria selesai: perubahan warna/dokumentasi remote tergabung, riwayat edit lokal dipertahankan, seluruh progress belum di-commit dipulihkan, serta fungsi aplikasi lolos pengujian. Semua terpenuhi.
+
+Status: merge riwayat sudah menjadi commit lokal 87f342e. Progress pencatatan pelaku/statistik serta laporan masih berupa perubahan lokal. Tidak dilakukan push ke GitHub.

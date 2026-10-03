@@ -112,3 +112,15 @@ Jalankan `npm run db:migrate` untuk menambahkan kolom `deadline` pada instalasi 
 Klik ikon pensil pada kartu untuk mengedit judul, deskripsi, status (termasuk kolom custom), dan deadline. Form berisi nilai task yang sekarang. Klik **Simpan perubahan** untuk menyimpan ke MySQL atau **Batal** untuk membuang perubahan. Deskripsi dan deadline dapat dikosongkan; judul wajib diisi. Jika server gagal, form tetap terbuka dan input dipertahankan.
 
 Owner dan member dapat mengedit task pada workspace yang diikuti. API `PATCH /api/tasks.php?workspace_id=<id>&id=<task-id>` menerima sebagian atau semua field `title`, `description`, `status`, dan `deadline`. Field yang tidak dikirim tetap utuh, begitu juga ID, pembuat, workspace, dan waktu pembuatan task. Fitur ini tidak membutuhkan perubahan struktur database.
+
+## Pembuat dan penyelesaian task
+
+Kartu menampilkan **Dibuat oleh** dari akun pembuat dan **Diselesaikan oleh** beserta waktu WIB saat task masuk kolom Done. Identitas dicatat oleh server dari session, bukan input pengguna. Task yang langsung dibuat di Done juga dicatat selesai oleh pembuatnya. Mengedit task yang tetap Done tidak mengganti orang/waktu penyelesaian. Saat task keluar dari Done, catatan penyelesaian dikosongkan; saat masuk kembali, dicatat orang yang terakhir menyelesaikannya.
+
+Jalankan `npm run db:migrate` pada instalasi lama untuk menambahkan `completed_by` dan `completed_at`. Task lama yang selesai sebelum fitur ini tersedia menampilkan **Belum tercatat** karena tidak ada riwayat pelakunya. Pembuat tetap mengikuti data `created_by` yang sudah ada. Nama tetap tersedia ketika anggota dikeluarkan dari workspace selama akun tersebut masih ada.
+
+## Statistik workspace
+
+Klik **Statistik** di header board untuk membuka halaman tersendiri. Halaman memuat total, selesai, belum selesai, task terlambat, progress, jumlah deadline dekat, grafik distribusi seluruh kolom (termasuk custom), kontribusi tiap anggota, dan detail task selesai beserta pembuat/penyelesai/waktu WIB. URL `#workspace=<id>&view=statistics` tetap dapat dibuka setelah reload. Gunakan **Perbarui statistik** untuk mengambil data terbaru dan **Kembali ke board** untuk kembali.
+
+Angka berasal dari task yang masih ada; task yang dihapus tidak masuk hitungan. Penyelesaian memakai pelaku terakhir pada task yang saat ini Done, bukan riwayat seluruh aktivitas. Anggota aktif tanpa kontribusi tetap ditampilkan, sedangkan pelaku lama dan data belum tercatat diberi keterangan. Data memakai endpoint task, kolom, dan anggota yang sudah dibatasi keanggotaan workspace. Tidak diperlukan migrasi tambahan.
