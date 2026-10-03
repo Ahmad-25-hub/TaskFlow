@@ -1,0 +1,134 @@
+BAHASA DESAIN TASKFLOW
+Versi: 3 Oktober 2026
+
+1. ARAH DESAIN
+
+TaskFlow adalah alat kerja tim. Tampilannya dibuat tenang, jelas, dan praktis,
+seperti papan kerja yang dipakai setiap hari. Pengguna baru seharusnya dapat
+menjawab tiga pertanyaan tanpa perlu membaca panduan panjang: proyek mana yang
+dibuka, pekerjaan apa yang perlu dikerjakan, dan sudah sampai tahap mana.
+
+Prinsip utamanya:
+- Informasi penting muncul lebih dulu; dekorasi tidak mengambil perhatian.
+- Satu warna biru menandai aksi utama. Warna lain membantu membaca status.
+- Label tombol menyebut tindakan secara langsung, misalnya "Tambah task".
+- Ruang kosong dipakai untuk memisahkan kelompok informasi, bukan mengisi layar.
+- Bentuk komponen sederhana dan konsisten, dengan sudut sedikit membulat.
+
+Referensi pola interaksi adalah papan Kanban modern: kolom menunjukkan tahap,
+kartu menunjukkan pekerjaan, dan pengguna dapat memindahkan kartu antar tahap.
+TaskFlow tetap memakai identitasnya sendiri, tanpa menyalin tampilan produk lain.
+
+2. WARNA DASAR
+
+Latar aplikasi       #F7F8FA   abu sangat muda; membuat area kerja terasa ringan.
+Permukaan kartu      #FFFFFF   kontras untuk isi task, form, dan dialog.
+Teks utama           #17232F   gelap, untuk judul dan informasi penting.
+Teks pendukung       #5B6B78   untuk deskripsi dan metadata.
+Garis pemisah        #DCE3E9   batas halus antarkomponen.
+Aksi utama           #0B67C2   tombol utama, tautan, dan fokus input.
+Aksi utama hover     #07539D   respons saat penunjuk berada di tombol.
+
+Biru aksi tidak dipakai untuk semua elemen. Jika semua bagian sama-sama mencolok,
+pengguna akan sulit menentukan langkah berikutnya.
+
+3. WARNA KOLOM KANBAN
+
+Warna kolom adalah petunjuk visual untuk tahap kerja. Setiap kolom memakai tiga
+tingkatan warna: latar lembut, garis tepi yang sedikit lebih kuat, dan garis
+atas/ikon sebagai aksen. Kartu task tetap putih agar teks mudah dibaca.
+
+Tahap / pilihan   Latar      Garis tepi  Aksen
+To Do / Biru      #E8F2FB    #C8DCED     #2379C4
+In Progress       #FAF1DF    #E9D8B9     #C8922C
+Done              #E5F2EB    #C5E0D1     #399975
+Rose              #F9E9EB    #EBCBD0     #D96C78
+Purple            #F0EBF8    #DCD0EE     #8A70BB
+Sky               #E6F3F8    #C4E1ED     #48A2C7
+Teal              #E4F2EF    #C2DFDA     #3F9F9D
+Orange            #FAEEE3    #EFD8C3     #DC8949
+Slate             #E9EEF2    #D2DCE3     #8995A2
+
+Jangan mengandalkan warna saja untuk menjelaskan status. Nama kolom, jumlah task,
+dan pilihan status pada kartu harus tetap terlihat. Saat kartu diseret ke kolom,
+kolom tujuan mendapat penekanan yang mengikuti warna kolom tersebut.
+
+4. TIPOGRAFI DAN HIERARKI
+
+Font antarmuka menggunakan Inter, dengan Segoe UI atau Arial sebagai cadangan.
+Judul halaman berukuran sekitar 28-38 px dan menjadi titik masuk pembacaan.
+Judul bagian sekitar 15-17 px. Teks isi dan tombol sekitar 13-14 px. Metadata
+seperti tanggal memakai ukuran lebih kecil, tetapi tetap cukup jelas dibaca.
+
+Urutan baca pada papan:
+1) Nama workspace dan deskripsinya.
+2) Progress serta akses anggota dan pengaturan.
+3) Pencarian, filter status, dan tombol Tambah task.
+4) Nama kolom, jumlah task, lalu isi kartu.
+
+Tulisan menggunakan bahasa Indonesia yang singkat dan konkret. Istilah produk
+yang sudah dikenal, seperti workspace, task, To Do, In Progress, dan Done, tetap
+dipakai secara konsisten.
+
+5. KOMPONEN
+
+Navigasi:
+- Logo TaskFlow berada di kiri dan membawa pengguna ke daftar workspace.
+- Nama pengguna dan tombol Keluar berada di kanan.
+- Dalam papan, jejak "Semua workspace / nama workspace" menunjukkan lokasi.
+
+Tombol:
+- Tombol utama berwarna biru untuk tindakan terpenting pada satu area.
+- Tombol sekunder putih dengan garis tepi untuk tindakan pendamping.
+- Tindakan berisiko, seperti menghapus, memakai ikon dan respons warna merah.
+- Teks tombol menjelaskan hasil tindakan; hindari kata ajakan yang kabur.
+
+Kartu workspace:
+- Menampilkan nama, deskripsi, jumlah anggota, jumlah task, dan peran pengguna.
+- Aksi "Buka workspace" diletakkan konsisten di bagian bawah kartu.
+
+Kartu task:
+- Judul menjadi informasi pertama; deskripsi hanya tampil bila ada.
+- Garis aksen kecil menghubungkan kartu dengan warna kolom.
+- Deadline, tanggal dibuat, dan pilihan status adalah informasi pendukung.
+- Kartu dapat diseret; status juga bisa diubah melalui pilihan pada kartu.
+
+Form dan dialog:
+- Satu dialog berfokus pada satu pekerjaan, misalnya membuat task.
+- Label selalu terlihat di atas input; placeholder hanya memberi contoh.
+- Field wajib diberi tanda, sedangkan field opsional disebutkan jelas.
+- Pesan kesalahan tampil dekat dengan konteksnya dan menjelaskan masalahnya.
+
+6. TATA LETAK DAN RESPONSIF
+
+Halaman memakai lebar maksimal agar baris teks dan papan tidak terlalu melebar.
+Jarak antarbagiannya cukup untuk dipindai, tetapi kartu dan kolom tetap ringkas.
+Pada layar kecil, bagian yang berdampingan tersusun vertikal. Kolom Kanban juga
+berubah menjadi susunan vertikal, sehingga isi task tetap dapat dibaca tanpa
+memaksa pengguna memperbesar halaman.
+
+7. AKSESIBILITAS DAN INTERAKSI
+
+- Teks penting memakai kontras terhadap latarnya.
+- Fokus keyboard terlihat dengan garis biru.
+- Tombol ikon mempunyai nama yang dapat dibaca pembaca layar.
+- Dialog menjaga fokus di dalamnya dan dapat ditutup dengan Escape.
+- Pengurutan kolom dapat dilakukan dengan drag atau tombol panah pada keyboard.
+- Animasi dibatasi agar keadaan antarmuka tidak terasa berubah tiba-tiba.
+
+8. ATURAN UNTUK HALAMAN ATAU FITUR BARU
+
+Mulai dari kebutuhan pengguna: tindakan utama apa, informasi yang wajib dibaca,
+dan status apa yang perlu dibedakan. Gunakan komponen serta ukuran yang sudah
+ada sebelum membuat variasi baru. Tambahkan warna hanya ketika warna itu
+menjelaskan fungsi atau status. Hindari gradien besar, bayangan berat, ikon
+dekoratif berulang, dan teks promosi pada area kerja.
+
+Sumber implementasi saat ini:
+- src/index.css: token visual, warna kolom, dan aturan komponen.
+- src/data/tasks.js: status utama serta pilihan warna kolom tambahan.
+- src/components/: susunan halaman, papan, kartu, dan dialog.
+
+Catatan: aturan desain yang aktif pada stylesheet berada di bagian akhir
+src/index.css, setelah komentar "TaskFlow product UI". Jika stylesheet
+dirapikan kemudian, pertahankan nilai warna dan perilaku di dokumen ini.

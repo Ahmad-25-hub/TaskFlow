@@ -132,12 +132,20 @@ body { background: #f7f8fa; color: #17232f; }
 .board-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 15px; padding: 23px 0 16px; }
 .board-toolbar-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 9px; }
 .progress-panel { min-width: 206px; border: 1px solid #dce3e9; border-radius: 8px; background: #fff; padding: 13px 16px; box-shadow: none; }
-.kanban-column { min-height: 220px; border: 1px solid #dce3e9; border-radius: 8px; background: #eef2f5; padding: 13px; }
-.column-indigo, .column-amber, .column-emerald, .column-rose, .column-purple, .column-sky, .column-teal, .column-orange, .column-slate { --column-bg: #eef2f5; --column-text: #526475; }
-.column-indigo { --column-color: #2379c4; } .column-amber { --column-color: #c8922c; } .column-emerald { --column-color: #399975; } .column-rose { --column-color: #d96c78; } .column-purple { --column-color: #8a70bb; } .column-sky { --column-color: #48a2c7; } .column-teal { --column-color: #3f9f9d; } .column-orange { --column-color: #dc8949; } .column-slate { --column-color: #8995a2; }
+.kanban-column { min-height: 220px; border: 1px solid var(--column-border, #dce3e9); border-top: 3px solid var(--column-color, #8995a2); border-radius: 8px; background: var(--column-bg, #e9eef2); padding: 11px 13px 13px; }
+.column-indigo { --column-color: #2379c4; --column-bg: #e8f2fb; --column-border: #c8dced; --column-text: #245f91; }
+.column-amber { --column-color: #c8922c; --column-bg: #faf1df; --column-border: #e9d8b9; --column-text: #88621f; }
+.column-emerald { --column-color: #399975; --column-bg: #e5f2eb; --column-border: #c5e0d1; --column-text: #2d7558; }
+.column-rose { --column-color: #d96c78; --column-bg: #f9e9eb; --column-border: #ebcbd0; --column-text: #9f4e59; }
+.column-purple { --column-color: #8a70bb; --column-bg: #f0ebf8; --column-border: #dcd0ee; --column-text: #6f579b; }
+.column-sky { --column-color: #48a2c7; --column-bg: #e6f3f8; --column-border: #c4e1ed; --column-text: #327d9e; }
+.column-teal { --column-color: #3f9f9d; --column-bg: #e4f2ef; --column-border: #c2dfda; --column-text: #2d7775; }
+.column-orange { --column-color: #dc8949; --column-bg: #faeee3; --column-border: #efd8c3; --column-text: #a96531; }
+.column-slate { --column-color: #8995a2; --column-bg: #e9eef2; --column-border: #d2dce3; --column-text: #586978; }
 .column-icon { color: var(--column-color); }
-.column-count { background: #dce4ea; color: #4a5a67; }
-.column-add:hover, .column-delete:hover { background: #dce4ea; color: #1a2d3d; }
+.column-count { background: color-mix(in srgb, var(--column-color) 14%, white); color: var(--column-text); }
+.column-add:hover, .column-delete:hover { background: color-mix(in srgb, var(--column-color) 12%, white); color: var(--column-text); }
+.kanban-column.drop-active { background: color-mix(in srgb, var(--column-bg) 82%, var(--column-color)); box-shadow: inset 0 0 0 2px var(--column-color); }
 .column-insert-before::before, .column-insert-after::after { background: #0b67c2; }
 .task-card { border-color: #dce3e9; border-radius: 7px; padding: 13px 14px 11px; box-shadow: 0 1px 2px #132e4310; }
 .task-card:hover { border-color: #acc4d9; box-shadow: 0 3px 10px #132e4314; transform: none; }
@@ -145,7 +153,7 @@ body { background: #f7f8fa; color: #17232f; }
 .tag-indigo { background: #e6f1fb; color: #1d6eae; } .tag-amber { background: #fff2d8; color: #96660d; } .tag-emerald { background: #e1f3e9; color: #247856; } .tag-rose { background: #fbe7e9; color: #aa4f5b; } .tag-purple { background: #eee9f7; color: #7659a5; } .tag-sky { background: #e0f4fa; color: #2482a2; } .tag-teal { background: #e0f3f1; color: #277e7a; } .tag-orange { background: #fcebdc; color: #a76023; } .tag-slate { background: #e7edf1; color: #586978; }
 .task-status-select { border: 1px solid #dce3e9; background: #fff; color: #5b6b78; font-size: 11px; }
 .add-column-task { justify-content: flex-start; border: 0; color: #536a7d; font-size: 12px; font-weight: 600; }
-.add-column-task:hover { background: #e0e7ed; }
+.add-column-task:hover { background: color-mix(in srgb, var(--column-color) 12%, white); color: var(--column-text); }
 .empty-column { min-height: 126px; }
 .add-column-card { border-width: 1px; border-color: #b7c5d0; border-radius: 8px; background: #f2f5f7; }
 .add-column-card:hover { border-color: #0b67c2; background: #eaf3fb; box-shadow: none; }
