@@ -54,6 +54,13 @@ if ($method === 'PATCH') {
     $data = payload();
     $updates = [];
     $values = [];
+    foreach (['title' => [1, 120], 'description' => [0, 1000]] as $field => $limits) {
+        if (array_key_exists($field, $data)) {
+            if (!is_string($data[$field])) respond(422, ['error' => 'Judul dan deskripsi harus berupa teks.']);
+            $updates[] = $field . ' = ?';
+            $values[] = textField($data, $field, $limits[0], $limits[1]);
+        }
+    }
     if (array_key_exists('status', $data)) {
         validateTaskColumn($db, $workspaceId, $data['status']);
         $updates[] = 'status = ?';
@@ -63,7 +70,7 @@ if ($method === 'PATCH') {
         $updates[] = 'deadline = ?';
         $values[] = deadlineValue($data['deadline']);
     }
-    if (!$updates) respond(422, ['error' => 'Isi status atau deadline yang ingin diubah.']);
+    if (!$updates) respond(422, ['error' => 'Isi judul, deskripsi, status, atau deadline yang ingin diubah.']);
     $db->prepare('UPDATE tasks SET ' . implode(', ', $updates) . ' WHERE id = ? AND workspace_id = ?')->execute(array_merge($values, [$id, $workspaceId]));
     $db->commit();
     respond(200, ['task' => findTask($db, $id, $workspaceId)]);

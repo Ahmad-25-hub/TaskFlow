@@ -18,6 +18,7 @@ export default function WorkspaceBoard({ workspace, onBack, onUpdated }) {
   const deletingColumnRef = useRef(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [editingTask, setEditingTask] = useState(null)
   const [modalStatus, setModalStatus] = useState(null)
   const [query, setQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
@@ -121,6 +122,28 @@ export default function WorkspaceBoard({ workspace, onBack, onUpdated }) {
     } catch (issue) { setError(issue.message) }
   }
 
+  function openEditTask(task) {
+    if (deletingColumnRef.current || pendingRef.current.has(task.id)) return
+    setError('')
+    setEditingTask(task)
+  }
+
+  async function editTask(values) {
+    const id = editingTask.id
+    if (deletingColumnRef.current || pendingRef.current.has(id)) return
+    pendingRef.current.add(id); setPendingIds(new Set(pendingRef.current))
+    try {
+      const updated = await taskApi.update(workspace.id, id, values)
+      setTasks((current) => current.map((task) => task.id === id ? updated : task))
+      setEditingTask(null)
+      setQuery('')
+      setStatusFilter('all')
+      setError('')
+      setNotice(`Task ${updated.title} berhasil diperbarui.`)
+    } catch (issue) { setError(issue.message) }
+    finally { pendingRef.current.delete(id); setPendingIds(new Set(pendingRef.current)) }
+  }
+
   async function deleteTask(id) {
     if (deletingColumnRef.current || pendingRef.current.has(id)) return
     pendingRef.current.add(id); setPendingIds(new Set(pendingRef.current))
@@ -194,7 +217,7 @@ export default function WorkspaceBoard({ workspace, onBack, onUpdated }) {
             </div>
           </div>
           {error && <p role="alert" className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
-          {loading ? <p className="py-8 text-center text-sm text-slate-500">Memuat task...</p> : <KanbanBoard now={now} onMoveColumn={moveColumn} isSavingColumnOrder={isSavingColumnOrder} columns={columns} onOpenAddColumn={() => { setError(''); setShowAddColumn(true) }} onDeleteColumn={deleteColumn} tasks={filteredTasks} allTasks={tasks} pendingIds={pendingIds} onAddTask={setModalStatus} onDeleteTask={deleteTask} onMoveTask={moveTask} onUpdateDeadline={updateDeadline} isFiltered={Boolean(query.trim()) || statusFilter !== 'all'} />}
+          {loading ? <p className="py-8 text-center text-sm text-slate-500">Memuat task...</p> : <KanbanBoard now={now} onMoveColumn={moveColumn} isSavingColumnOrder={isSavingColumnOrder} columns={columns} onOpenAddColumn={() => { setError(''); setShowAddColumn(true) }} onDeleteColumn={deleteColumn} tasks={filteredTasks} allTasks={tasks} pendingIds={pendingIds} onAddTask={setModalStatus} onDeleteTask={deleteTask} onEditTask={openEditTask} onMoveTask={moveTask} onUpdateDeadline={updateDeadline} isFiltered={Boolean(query.trim()) || statusFilter !== 'all'} />}
         </section>
         <footer className="mt-4 text-xs text-slate-500">
           <p>Seret kartu untuk mengubah status. Seret judul kolom untuk mengatur urutan.</p>
@@ -202,6 +225,7 @@ export default function WorkspaceBoard({ workspace, onBack, onUpdated }) {
       </main>
       <div aria-live="polite" role="status" className={notice ? 'toast' : 'sr-only'}>{notice && <CheckCheck size={18} className="shrink-0 text-emerald-500" />}{notice}</div>
       {modalStatus && <AddTaskModal columns={columns} defaultStatus={modalStatus} onClose={() => { setModalStatus(null); setError('') }} onSubmit={addTask} serverError={error} />}
+      {editingTask && <AddTaskModal key={editingTask.id} initialTask={editingTask} columns={columns} onClose={() => { setEditingTask(null); setError('') }} onSubmit={editTask} serverError={error} />}
       {showAddColumn && <AddColumnModal onClose={() => { setShowAddColumn(false); setError('') }} onSubmit={addColumn} serverError={error} />}
       {showSettings && <WorkspaceSettings workspace={workspace} onClose={() => setShowSettings(false)} onUpdated={onUpdated} />}
     </div>

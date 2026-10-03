@@ -106,3 +106,9 @@ Tarik judul/ikon pegangan kolom dan lepaskan sebelum atau sesudah kolom tujuan. 
 Deadline bersifat opsional dan disimpan sebagai tanggal (DATE, tanpa jam). Isi saat membuat task, atau klik tanggal / **Tambah deadline** di kartu untuk mengubah maupun menghapusnya. Tanggal dihitung berdasarkan WIB (Asia/Jakarta): **Hari ini**, **Segera** untuk 1-2 hari mendatang, dan **Terlambat** untuk tanggal yang sudah lewat. Task di kolom **Done** ditandai **Selesai**. Penanda diperbarui setiap menit selama board terbuka.
 
 Jalankan `npm run db:migrate` untuk menambahkan kolom `deadline` pada instalasi lama. Task lama mendapat nilai kosong; data lain dipertahankan. API task menerima `deadline` berupa `YYYY-MM-DD` atau `null` pada POST/PATCH. PATCH bisa mengubah deadline, status, atau keduanya tanpa menimpa field lainnya.
+
+## Edit task
+
+Klik ikon pensil pada kartu untuk mengedit judul, deskripsi, status (termasuk kolom custom), dan deadline. Form berisi nilai task yang sekarang. Klik **Simpan perubahan** untuk menyimpan ke MySQL atau **Batal** untuk membuang perubahan. Deskripsi dan deadline dapat dikosongkan; judul wajib diisi. Jika server gagal, form tetap terbuka dan input dipertahankan.
+
+Owner dan member dapat mengedit task pada workspace yang diikuti. API `PATCH /api/tasks.php?workspace_id=<id>&id=<task-id>` menerima sebagian atau semua field `title`, `description`, `status`, dan `deadline`. Field yang tidak dikirim tetap utuh, begitu juga ID, pembuat, workspace, dan waktu pembuatan task. Fitur ini tidak membutuhkan perubahan struktur database.

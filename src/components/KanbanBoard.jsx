@@ -11,6 +11,7 @@ export default function KanbanBoard({
   columns = TASK_STATUSES,
   onAddTask,
   onDeleteTask,
+  onEditTask,
   onMoveTask,
   onUpdateDeadline,
   onOpenAddColumn,
@@ -80,6 +81,7 @@ export default function KanbanBoard({
             totalCount={allTasks.filter((task) => task.status === status.id).length}
             onAddTask={onAddTask}
             onDeleteTask={onDeleteTask}
+            onEditTask={onEditTask}
             onMoveTask={onMoveTask}
             onUpdateDeadline={onUpdateDeadline}
             onDropTask={dropTask}

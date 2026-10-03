@@ -13,6 +13,7 @@ export default function KanbanColumn({
   totalCount,
   onAddTask,
   onDeleteTask,
+  onEditTask,
   onMoveTask,
   onUpdateDeadline,
   onDropTask,
@@ -102,6 +103,7 @@ export default function KanbanColumn({
             task={task}
             columns={columns}
             onDelete={onDeleteTask}
+            onEdit={onEditTask}
             onMove={onMoveTask}
             onUpdateDeadline={onUpdateDeadline}
             onDragChange={onDragChange}

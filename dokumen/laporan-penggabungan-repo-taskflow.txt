@@ -1,5 +1,5 @@
 LAPORAN PEKERJAAN TASKFLOW
-Penggabungan perubahan repo dengan progress lokal
+Penggabungan repo, deadline, urutan kolom, dan edit task
 Tanggal laporan: 3 Oktober 2026
 Lokasi proyek: C:\lomba\TaskFlow
 Repository: https://github.com/Ahmad-25-hub/TaskFlow.git
@@ -226,7 +226,7 @@ Pekerjaan penggabungan dianggap selesai jika:
 
 Semua kriteria tersebut terpenuhi pada akhir pekerjaan penggabungan.
 
-11. STATUS GIT DAN BATAS PEKERJAAN
+11. STATUS GIT SAAT LAPORAN AWAL DIBUAT (CATATAN HISTORIS)
 
 Pada akhir pekerjaan penggabungan, basis lokal sudah mengikuti commit 937c780 dan hasil integrasi masih berupa perubahan lokal. Pada pekerjaan tersebut saya tidak melakukan push ke GitHub.
 
@@ -254,3 +254,267 @@ Untuk menjalankan aplikasi jika server belum aktif:
 Untuk instalasi baru atau database dengan struktur lama, jalankan npm run db:migrate setelah konfigurasi koneksi benar. Rincian tambahan tersedia dalam README.md.
 
 Kriteria selesai untuk permintaan dokumentasi ini adalah folder dokumen tersedia, file .txt berhasil dibuat, dan isinya menjelaskan tujuan, langkah, perubahan, pengujian, serta hasil pekerjaan secara detail.
+
+13. PEMBARUAN LAPORAN: RUANG LINGKUP TERBARU
+
+Tanggal pembaruan: 3 Oktober 2026.
+
+Bagian 1-12 mencatat penggabungan repository pertama dan kondisi saat laporan awal dibuat. Bagian berikut melengkapi laporan dengan pekerjaan setelahnya:
+- Menambahkan deadline opsional pada task.
+- Menggabungkan perubahan urutan kolom dari repository dengan progress deadline lokal.
+- Menambahkan fitur edit task.
+- Memperbarui dokumentasi ini sesuai permintaan pengguna.
+
+Status Git terkini dijelaskan pada bagian 17; status pada bagian 11 merupakan riwayat dan bukan kondisi terbaru.
+
+14. FITUR DEADLINE TASK
+
+Permintaan dan tujuan:
+Pengguna menyetujui penambahan deadline sederhana agar tim dapat menentukan prioritas dan mengetahui task yang terlambat. Deadline berupa tanggal tanpa jam dan tidak wajib diisi.
+
+Pekerjaan yang dilakukan:
+- Menambahkan deadline DATE NULL pada tabel tasks melalui schema dan migrasi.
+- Membuat migrasi memeriksa keberadaan kolom sebelum menambahkannya, sehingga aman dijalankan ulang.
+- Memberi task lama deadline kosong tanpa mengubah data task lainnya.
+- Memperluas POST/PATCH task untuk menerima deadline YYYY-MM-DD atau null.
+- Memvalidasi format tanggal, batas tahun yang didukung database, dan keabsahan tanggal kalender, termasuk tahun kabisat.
+- PATCH deadline tidak mengubah status jika status tidak dikirim.
+- Menambahkan input tanggal opsional pada form tambah task.
+- Menampilkan tanggal dan penanda deadline pada kartu.
+- Menambahkan editor tanggal langsung di kartu dengan tombol simpan, hapus, dan batal.
+- Mempertahankan tanggal yang tersimpan ketika API gagal dan mempertahankan input editor agar pengguna bisa mencoba kembali.
+- Menghitung hari menggunakan Asia/Jakarta (WIB), bukan selisih jam atau zona waktu browser.
+- Memperbarui waktu acuan board setiap menit agar penanda tanggal ikut berubah selama halaman terbuka.
+
+Aturan penanda:
+- Hari ini: deadline sama dengan tanggal hari ini di WIB.
+- Segera: deadline satu atau dua hari setelah hari ini.
+- Terlambat: deadline sudah lewat dan task belum berada di kolom Done.
+- Deadline: tanggal lebih dari dua hari ke depan.
+- Selesai: task berada di kolom Done, termasuk jika tanggal deadline sudah lewat.
+- Task tanpa deadline tidak diberi penanda waktu; kartu menyediakan tombol Tambah deadline.
+
+File yang dibuat atau diubah:
+- src/utils/deadline.js: fungsi perhitungan dan format penanda.
+- database/schema.sql dan database/migrate.php: kolom deadline serta migrasi.
+- api/tasks.php dan src/api/tasks.js: penyimpanan dan perubahan deadline.
+- src/components/AddTaskModal.jsx: input deadline saat membuat task.
+- src/components/TaskCard.jsx: badge tanggal serta editor inline.
+- src/components/WorkspaceBoard.jsx: perubahan state task dan waktu acuan.
+- src/components/KanbanBoard.jsx dan KanbanColumn.jsx: penerusan data/callback.
+- tests/migration.php dan tests/workspaces.spec.js: pengujian migrasi, tanggal, dan alur pengguna.
+- README.md: cara menggunakan fitur dan menjalankan migrasi.
+
+Backup dan hasil migrasi:
+Database dibackup sebelum migrasi deadline ke:
+C:\lomba\TaskFlow\database\backup-before-deadline.local
+
+Setelah migrasi, database utama tetap memiliki 2 akun, 1 workspace, dan 8 task. Seluruh 8 task lama memiliki deadline kosong. Angka ini merupakan hasil pemeriksaan saat migrasi deadline, bukan jumlah data yang harus selalu tetap sama ketika pengguna memakai aplikasi.
+
+Pengujian:
+- Dua belas skenario browser/API berhasil setelah fitur deadline ditambahkan.
+- Pengujian tambahan memeriksa tanggal WIB saat tanggal UTC masih hari sebelumnya, batas penanda Segera, dan pengecualian Done.
+- Tambah, ubah, hapus, serta persistensi deadline setelah reload berhasil.
+- Tanggal tidak valid dan penggunaan task lintas workspace ditolak.
+- Edit tanggal yang gagal tidak menimpa tanggal tersimpan.
+- Pengujian migrasi berulang memastikan task lama memiliki deadline kosong.
+- Lint, build, dan pemeriksaan sintaks PHP berhasil.
+- Tampilan mobile diperiksa melalui screenshot pengujian.
+
+Kriteria selesai:
+Deadline opsional bisa dibuat, diubah, dihapus, tersimpan di MySQL, ditampilkan dengan aturan WIB yang benar, dan tidak menghilangkan data lama. Semua kriteria tersebut terpenuhi.
+
+15. PENGGABUNGAN FITUR URUTAN KOLOM DARI REPOSITORY
+
+Permintaan dan tujuan:
+Pengguna kembali meminta pemeriksaan perubahan repository serta penggabungan dengan progress lokal, yang saat itu sudah memiliki deadline.
+
+Perubahan remote yang ditemukan:
+- 7edfb47: feat: add drag-and-drop column ordering with persistence
+- 6cc0a72: Merge origin/main and integrate column ordering into workspaces
+
+Fitur remote:
+- Memindahkan urutan kolom dengan menarik judul/ikon pegangan kolom.
+- Menampilkan garis penanda posisi sisipan sebelum atau sesudah kolom tujuan.
+- Mengatur urutan melalui tombol panah saat judul kolom difokuskan.
+- Menyimpan sort_order per workspace melalui PATCH endpoint kolom.
+- Memvalidasi bahwa daftar urutan berisi seluruh ID kolom tanpa duplikat.
+- Menampilkan error dan mempertahankan urutan lama jika server menolak atau tidak tersedia.
+
+Langkah penggabungan:
+- Memeriksa working tree dan mengambil informasi repository terbaru.
+- Menyimpan perubahan deadline serta dokumentasi yang belum tercatat dalam Git stash.
+- Memperbarui basis lokal dari de12f6d ke 6cc0a72 melalui fast-forward.
+- Menerapkan kembali stash.
+- Menyelesaikan konflik README.md dengan mempertahankan dokumentasi deadline dan urutan kolom.
+- Menyelesaikan konflik WorkspaceBoard.jsx dengan menggabungkan callback urutan kolom, deadline, serta waktu acuan penanda tanggal.
+- Memeriksa hasil merge otomatis KanbanBoard.jsx dan KanbanColumn.jsx agar seluruh props deadline dan urutan kolom tetap diteruskan.
+- Menyesuaikan validasi daftar ID pada api/columns.php agar kompatibel dengan PHP 8.0.30 di XAMPP. Pemanggilan array_is_list dari versi remote diganti dengan pemeriksaan indeks array karena fungsi tersebut belum tersedia pada PHP 8.0.
+- Membersihkan status konflik Git tanpa menghapus backup stash.
+
+Backup progress:
+Nama stash:
+Backup deadline dan dokumentasi sebelum gabung urutan kolom 6cc0a72
+Hash saat dibuat:
+841a07571031d91af0e88d6e98c251521be91356
+
+File remote terkait:
+- api/columns.php dan src/api/columns.js.
+- src/components/KanbanBoard.jsx, KanbanColumn.jsx, dan WorkspaceBoard.jsx.
+- src/index.css dan README.md.
+- tests/z-column-order.spec.js.
+- dokumen/laporan-2026-10-03-urutan-kolom.txt.
+
+Pengujian dan hasil:
+- Delapan belas skenario pengujian berhasil setelah penggabungan.
+- Pengujian urutan mencakup persistensi setelah reload, drag vertikal pada viewport ponsel, keyboard, batas urutan, penolakan server, pembatalan drag, dan pemisahan drag kartu dari drag kolom.
+- Ditambahkan pengujian integrasi task yang mempunyai deadline di dalam kolom yang diurutkan. Status dan deadline tetap utuh setelah reorder/reload; perubahan deadline tidak mengubah urutan kolom.
+- Pengujian integrasi tambahan tersebut berhasil pada pengujian terarah.
+- Build, lint, pemeriksaan PHP, serta pemeriksaan konflik/whitespace berhasil.
+- Server aplikasi lokal tetap merespons HTTP 200.
+- Pengujian menggunakan database sementara, bukan database taskflow utama.
+- Pada pekerjaan penggabungan ini tidak dilakukan push ke GitHub.
+
+Kriteria selesai:
+Perubahan remote sudah tergabung, fitur deadline tetap berfungsi, urutan kolom tersimpan per workspace, tidak ada konflik yang tersisa, dan pengujian integrasi berhasil. Semua kriteria terpenuhi.
+
+16. FITUR EDIT TASK
+
+Permintaan dan tujuan:
+Pengguna meminta fitur untuk mengedit task. Tujuannya memungkinkan owner dan member memperbaiki isi pekerjaan yang sudah ada tanpa menghapus lalu membuat ulang task.
+
+Perilaku yang dibuat:
+- Ikon pensil pada setiap kartu membuka form Edit task.
+- Form menampilkan judul, deskripsi, status, dan deadline task yang sudah tersimpan.
+- Status dapat dipilih dari kolom workspace aktif, termasuk kolom custom.
+- Judul wajib berisi teks; deskripsi dan deadline boleh dikosongkan.
+- Simpan perubahan mengirim data ke API dan memperbarui kartu dari hasil server.
+- Jika status berubah, kartu berpindah ke kolom yang dipilih.
+- Pencarian dan filter dibersihkan setelah penyimpanan berhasil agar kartu hasil edit tetap terlihat.
+- Tombol Batal menutup form tanpa menyimpan perubahan.
+- Saat permintaan berjalan, input dan tombol form dinonaktifkan untuk mencegah pengiriman berulang.
+- Jika penyimpanan gagal, form tetap terbuka dan input tetap ada.
+- Jika session berakhir, aplikasi kembali ke login melalui penanganan API yang sudah ada.
+
+Implementasi backend:
+- api/tasks.php menerima PATCH title, description, status, dan deadline.
+- Mendukung perubahan sebagian field; field yang tidak dikirim tidak ditimpa.
+- Judul divalidasi 1-120 karakter setelah trim, deskripsi 0-1000 karakter.
+- Judul dan deskripsi yang dikirim harus berupa string; null bukan pengganti teks kosong.
+- Status harus merupakan kolom workspace aktif; deadline harus tanggal kalender yang valid atau null.
+- Semua field divalidasi sebelum perintah UPDATE dijalankan, sehingga field yang valid tidak tersimpan sebagian jika field lain salah.
+- Session dan keanggotaan workspace wajib; ID task diperiksa bersama workspace_id.
+- ID task, created_at, created_by, dan workspace_id tidak diubah oleh fitur edit.
+- Tidak diperlukan migrasi atau perubahan struktur database untuk fitur edit.
+
+Implementasi frontend:
+- Form AddTaskModal.jsx digunakan bersama untuk mode tambah dan edit agar validasi, fokus keyboard, serta penanganan simpan konsisten.
+- Mode edit memakai initialTask dan tombol Simpan perubahan.
+- TaskCard.jsx menambahkan ikon pensil dan membuka form melalui callback.
+- KanbanBoard.jsx dan KanbanColumn.jsx meneruskan callback edit.
+- WorkspaceBoard.jsx menyimpan task yang sedang diedit, mengatur pending state, dan memperbarui daftar berdasarkan respons API.
+- src/api/tasks.js menambahkan method update untuk PATCH field task.
+
+File yang diubah pada pekerjaan edit:
+1. api/tasks.php
+2. src/api/tasks.js
+3. src/components/AddTaskModal.jsx
+4. src/components/TaskCard.jsx
+5. src/components/KanbanBoard.jsx
+6. src/components/KanbanColumn.jsx
+7. src/components/WorkspaceBoard.jsx
+8. tests/workspaces.spec.js
+9. README.md
+
+Pengujian edit:
+- Form diisi dengan nilai lama yang benar.
+- Batal tidak mengubah task.
+- Edit seluruh field, pindah ke kolom custom, dan reload mempertahankan hasil.
+- ID, pembuat, workspace, dan waktu pembuatan tetap sama.
+- Deskripsi dan deadline dapat dikosongkan.
+- Tampilan form mobile diperiksa melalui screenshot.
+- API menolak judul kosong, judul/deskripsi terlalu panjang, tipe data yang salah, status tidak ada, dan tanggal tidak valid.
+- Perubahan dengan field tidak valid tidak menyimpan field lainnya secara sebagian.
+- Permintaan tanpa login ditolak; pengguna di luar workspace ditolak.
+- Member yang sudah bergabung dapat mengedit task.
+- ID task tidak dapat digunakan untuk mengedit melalui workspace lain.
+- Kegagalan API mempertahankan input dan data lama.
+- Session yang berakhir mengembalikan pengguna ke login.
+
+Temuan dan perbaikan selama pengujian:
+Pengujian pertama menemukan description:null diterima sebagai teks kosong oleh helper lama. Ditambahkan pemeriksaan tipe eksplisit pada field teks PATCH agar null ditolak dan deskripsi hanya dikosongkan melalui string kosong. Pengujian validasi/atomisitas tersebut berhasil setelah perbaikan.
+
+Hasil akhir verifikasi:
+- Pada pengujian penuh, 20 dari 21 skenario berhasil dan satu skenario validasi gagal.
+- Setelah perbaikan tipe teks, skenario yang sebelumnya gagal dijalankan ulang dan berhasil.
+- Dengan demikian seluruh 21 skenario telah berhasil; tidak dilakukan pengujian penuh kedua setelah perbaikan terakhir tersebut.
+- npm run lint dan npm run build berhasil.
+- Sintaks api/tasks.php diperiksa kembali setelah perbaikan dan tidak memiliki kesalahan.
+- git diff --check tidak menemukan masalah whitespace.
+- Frontend dan API aplikasi lokal merespons HTTP 200.
+
+Kriteria selesai:
+Task dapat diedit dari kartu, nilai lama tampil, seluruh field dapat disimpan, perubahan bertahan setelah reload, pembatalan tidak menyimpan, kegagalan tidak menghilangkan input, pembatasan workspace tetap berlaku, dan pengujian terkait berhasil. Semua kriteria terpenuhi.
+
+17. KONDISI TERBARU SAAT PEMBARUAN DOKUMEN
+
+HEAD lokal yang diperiksa pada pembaruan ini:
+26e8cbc - menambahkan sistem deadline di task
+
+Commit tersebut mengikuti basis fitur urutan kolom 6cc0a72. Perubahan fitur edit task pada sembilan file di bagian 16 masih tercatat sebagai perubahan lokal yang belum di-commit saat laporan ini diperbarui.
+
+Pembuatan fitur edit dan pembaruan laporan ini tidak melakukan push ke GitHub. Pemeriksaan lokal tidak digunakan sebagai bukti apakah commit sebelumnya sudah di-push oleh pengguna.
+
+File utama laporan yang diperbarui:
+C:\lomba\TaskFlow\dokumen\laporan-penggabungan-repo-taskflow.txt
+
+Laporan urutan kolom dari repository tetap tersedia sebagai dokumen khusus:
+C:\lomba\TaskFlow\dokumen\laporan-2026-10-03-urutan-kolom.txt
+
+Cara menjalankan aplikasi tetap sama seperti bagian 12. Untuk instalasi lama yang belum memiliki deadline, jalankan npm run db:migrate. Fitur edit dan urutan kolom tidak memerlukan migrasi baru di luar struktur yang sudah dipakai.
+
+Kriteria selesai untuk pembaruan dokumen:
+- Memperbarui file laporan utama yang sudah ada.
+- Mencatat tujuan, perubahan file, perilaku, pengujian, temuan/perbaikan, serta kriteria selesai untuk deadline, integrasi urutan kolom, dan edit task.
+- Membedakan status historis dari kondisi Git terbaru.
+- Tidak menghapus penjelasan pekerjaan sebelumnya.
+
+18. PENGGABUNGAN REDESIGN ANTARMUKA DARI REPOSITORY
+
+Tanggal: 3 Oktober 2026.
+Permintaan: mengecek perubahan repository dan menggabungkannya dengan progress lokal edit task serta laporan ini.
+Tujuan: menggunakan antarmuka terbaru tanpa kehilangan login, workspace, deadline, kolom custom, pengurutan kolom, dan fitur edit task.
+
+Perubahan remote yang ditemukan:
+- 241bc09: Redesign TaskFlow interface across pages.
+- 09cbd7b: Merge remote-tracking branch origin/main.
+
+Perubahan tampilan meliputi halaman login/register, daftar workspace, navbar, board, kartu, form task/kolom, pengaturan workspace, warna, logo, dan metadata halaman. Toolbar pencarian/filter digabung, kartu diringkas, dan tampilan board menggunakan gaya baru dari repository.
+
+Langkah pengerjaan:
+1. Memeriksa perubahan lokal dan mengambil informasi terbaru dari origin.
+2. Menyimpan progress edit task serta dokumentasi dalam stash sebelum merge.
+3. Memperbarui basis lokal melalui fast-forward ke 09cbd7b.
+4. Menerapkan kembali stash dan mempertahankan backup tersebut.
+5. Menyelesaikan konflik AddTaskModal.jsx dengan mempertahankan desain form baru dan mode tambah/edit yang berbeda. Form tetap berisi nilai task lama pada mode edit.
+6. Memeriksa hasil merge otomatis kartu dan board agar ikon edit serta callback edit/deadline tetap terhubung.
+7. Menjalankan lint, build, pemeriksaan sintaks PHP, pemeriksaan konflik/whitespace, dan seluruh pengujian.
+8. Memeriksa screenshot board hasil redesign dan respons server lokal.
+9. Menambahkan hasil pekerjaan ini pada laporan utama.
+
+Backup progress:
+Nama stash: Backup edit task dan laporan sebelum gabung redesign 09cbd7b
+Hash saat dibuat: c84e01565421a7945412a05e3f26b6efe6411de9
+
+Hasil verifikasi:
+- Seluruh 21 skenario browser/API berhasil pada satu pengujian penuh setelah merge.
+- Pengujian mencakup login, workspace, CRUD task, deadline, edit task, kolom custom, urutan kolom, keyboard, tampilan mobile, serta kegagalan API.
+- Pengujian migrasi dari struktur lama dan migrasi berulang berhasil pada database sementara.
+- npm run lint dan npm run build berhasil.
+- Sintaks api/tasks.php valid; tidak ada konflik Git atau masalah whitespace tersisa.
+- Frontend port 5173 dan API port 8000 merespons HTTP 200.
+- Database utama tidak dimigrasikan atau diubah melalui pengujian ini. Pemeriksaan baca menunjukkan 2 akun, 1 workspace, dan 9 task.
+
+Kriteria selesai: desain terbaru tergabung, semua progress lokal tetap tersedia, konflik terselesaikan, aplikasi dapat dijalankan, dan pengujian fungsi berhasil. Semua kriteria terpenuhi.
+
+Status terbaru menggantikan catatan status lokal pada bagian 17: HEAD lokal sekarang 09cbd7b. Hasil integrasi edit task dan pembaruan laporan tetap berupa perubahan lokal. Pekerjaan ini tidak melakukan commit atau push ke GitHub.

@@ -1,11 +1,11 @@
 import { useState } from 'react'
 import { deadlineInfo } from '../utils/deadline'
-import { CalendarDays, ChevronDown, GripVertical, Trash2 } from 'lucide-react'
+import { CalendarDays, ChevronDown, GripVertical, Pencil, Trash2 } from 'lucide-react'
 import { TASK_STATUSES } from '../data/tasks'
 
 const dateFormatter = new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short', timeZone: 'Asia/Jakarta' })
 
-export default function TaskCard({ columns = TASK_STATUSES, task, onDelete, onMove, onDragChange, isDragging, isBusy, now, onUpdateDeadline }) {
+export default function TaskCard({ columns = TASK_STATUSES, task, onEdit, onDelete, onMove, onDragChange, isDragging, isBusy, now, onUpdateDeadline }) {
   const [editingDeadline, setEditingDeadline] = useState(false)
   const [draftDeadline, setDraftDeadline] = useState(task.deadline || '')
   const deadline = deadlineInfo(task.deadline, task.status, now)
@@ -24,6 +24,7 @@ export default function TaskCard({ columns = TASK_STATUSES, task, onDelete, onMo
         <span className={`task-card-accent tag-${status.color}`} aria-hidden="true" />
         <div className="flex items-center gap-1">
           <GripVertical size={14} className="text-slate-300" aria-hidden="true" />
+          <button type="button" disabled={isBusy} aria-label={`Edit task ${task.title}`} title="Edit task" className="delete-button hover:text-indigo-600" onClick={() => { setEditingDeadline(false); onEdit(task) }}><Pencil size={14} /></button>
           <button type="button" disabled={isBusy} aria-label={`Hapus task ${task.title}`} className="delete-button" onClick={() => onDelete(task.id)}><Trash2 size={14} /></button>
         </div>
       </div>
