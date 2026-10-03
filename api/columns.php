@@ -70,7 +70,7 @@ if (!is_string($id) || in_array($id, ['todo', 'in_progress', 'done'], true)) res
 $stmt = $db->prepare('SELECT id FROM columns WHERE workspace_id = ? AND id = ?');
 $stmt->execute([$workspaceId, $id]);
 if (!$stmt->fetchColumn()) respond(404, ['error' => 'Kolom tidak ditemukan.']);
-$db->prepare("UPDATE tasks SET status = 'todo' WHERE workspace_id = ? AND status = ?")->execute([$workspaceId, $id]);
+$db->prepare("UPDATE tasks SET status = 'todo', completed_by = NULL, completed_at = NULL WHERE workspace_id = ? AND status = ?")->execute([$workspaceId, $id]);
 $db->prepare('DELETE FROM columns WHERE workspace_id = ? AND id = ?')->execute([$workspaceId, $id]);
 $db->commit();
 respond(200, ['deleted' => true]);

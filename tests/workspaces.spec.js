@@ -1,3 +1,4 @@
+import { workspaceStatistics } from '../src/utils/statistics.js'
 import { test, expect } from '@playwright/test'
 import { deadlineInfo } from '../src/utils/deadline.js'
 
@@ -419,6 +420,13 @@ test('mode gelap dan terang berlaku di login dan papan serta tersimpan setelah r
   await page.getByRole('button', { name: 'Buat task', exact: true }).click()
   await expect(page.getByRole('article', { name: 'Rencana peluncuran' })).toBeVisible()
   await page.screenshot({ path: 'test-results/board-dark.png', fullPage: true })
+  await page.getByRole('button', { name: 'Statistik', exact: true }).click()
+  await expect(page.getByLabel('Total task', { exact: true })).toHaveCSS('background-color', 'rgb(30, 33, 37)')
+  await page.screenshot({ path: 'test-results/statistics-dark.png', fullPage: true })
+  await page.getByRole('button', { name: 'Kembali ke board' }).click()
+  await page.getByRole('button', { name: 'Edit task Rencana peluncuran' }).click()
+  await expect(page.getByRole('dialog', { name: 'Edit task' })).toHaveCSS('background-color', 'rgb(30, 33, 37)')
+  await page.getByRole('dialog', { name: 'Edit task' }).getByRole('button', { name: 'Batal', exact: true }).click()
   await page.getByRole('button', { name: 'Anggota & pengaturan' }).click()
   await page.screenshot({ path: 'test-results/settings-dark.png', fullPage: true })
   await page.getByRole('button', { name: 'Tutup dialog' }).click()
@@ -432,4 +440,234 @@ test('mode gelap dan terang berlaku di login dan papan serta tersimpan setelah r
   await expect(page.locator('.kanban-column.column-indigo')).toHaveCSS('background-color', 'rgb(232, 242, 251)')
   await page.reload()
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light')
+})
+
+test('edit task mengisi data lama, menyimpan semua field, batal, dan reload', async ({ page }) => {
+  await register(page.request, 'edit-task@example.com')
+  const workspace = await createWorkspace(page.request, 'Tim Edit Task')
+  const custom = (await (await page.request.post(`/api/columns.php?workspace_id=${workspace.id}`, { data: { label: 'Review Edit', color: 'purple' } })).json()).column
+  const original = (await (await page.request.post(tasksPath(workspace.id), { data: { title: 'Task Sebelum Edit', description: 'Deskripsi lama', status: 'todo', deadline: '2030-01-01' } })).json()).task
+  await page.goto(`/#workspace=${workspace.id}`)
+  await page.getByRole('button', { name: 'Edit task Task Sebelum Edit' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Edit task' })
+  await expect(dialog.getByLabel('Judul task')).toHaveValue(original.title)
+  await expect(dialog.getByLabel('Deskripsi (opsional)')).toHaveValue(original.description)
+  await expect(dialog.getByLabel('Status', { exact: true })).toHaveValue('todo')
+  await expect(dialog.getByLabel('Deadline (opsional)')).toHaveValue('2030-01-01')
+  await dialog.getByLabel('Judul task').fill('Perubahan dibatalkan')
+  await dialog.getByRole('button', { name: 'Batal', exact: true }).click()
+  await expect(page.getByRole('article', { name: original.title })).toBeVisible()
+  await page.getByRole('button', { name: `Edit task ${original.title}` }).click()
+  await dialog.getByLabel('Judul task').fill('Task Setelah Edit')
+  await dialog.getByLabel('Deskripsi (opsional)').fill('Deskripsi yang telah diperbarui')
+  await dialog.getByLabel('Status', { exact: true }).selectOption(custom.id)
+  await dialog.getByLabel('Deadline (opsional)').fill('2031-05-10')
+  await dialog.getByRole('button', { name: 'Simpan perubahan' }).click()
+  await expect(dialog).toHaveCount(0)
+  const card = region(page, custom.label).getByRole('article', { name: 'Task Setelah Edit' })
+  await expect(card).toContainText('Deskripsi yang telah diperbarui')
+  await expect(card).toContainText('10 Mei 2031')
+  await page.reload()
+  await expect(card).toBeVisible()
+  const saved = (await (await page.request.get(tasksPath(workspace.id))).json()).tasks[0]
+  expect(saved).toMatchObject({ id: original.id, created_at: original.created_at, created_by: original.created_by, workspace_id: original.workspace_id, title: 'Task Setelah Edit', description: 'Deskripsi yang telah diperbarui', status: custom.id, deadline: '2031-05-10' })
+  await card.getByRole('button', { name: 'Edit task Task Setelah Edit' }).click()
+  await dialog.getByLabel('Deskripsi (opsional)').fill('')
+  await dialog.getByLabel('Deadline (opsional)').fill('')
+  await page.setViewportSize({ width: 390, height: 844 })
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+  await page.screenshot({ path: 'test-results/edit-task-mobile.png', fullPage: true })
+  await dialog.getByRole('button', { name: 'Simpan perubahan' }).click()
+  const cleared = (await (await page.request.get(tasksPath(workspace.id))).json()).tasks[0]
+  expect(cleared.description).toBe('')
+  expect(cleared.deadline).toBeNull()
+})
+
+test('API edit memvalidasi semua field secara atomik dan membatasi workspace', async ({ page, playwright, baseURL }) => {
+  await register(page.request, 'edit-validation@example.com')
+  const workspace = await createWorkspace(page.request, 'Validasi Edit')
+  const task = (await (await page.request.post(tasksPath(workspace.id), { data: { title: 'Tetap Utuh', description: 'Detail awal', deadline: '2030-01-01' } })).json()).task
+  const endpoint = tasksPath(workspace.id, task.id)
+  for (const data of [{ title: '   ' }, { title: 'x'.repeat(121) }, { title: 123 }, { description: 'x'.repeat(1001) }, { description: null }, { title: 'Tidak boleh tersimpan', status: 'missing' }, { title: 'Tidak boleh tersimpan', deadline: '2031-02-30' }]) {
+    expect((await page.request.patch(endpoint, { data })).status()).toBe(422)
+  }
+  expect((await (await page.request.get(tasksPath(workspace.id))).json()).tasks[0]).toEqual(task)
+  const outsider = await playwright.request.newContext({ baseURL })
+  try {
+    expect((await outsider.patch(endpoint, { data: { title: 'Unauthorized' } })).status()).toBe(401)
+    await register(outsider, 'edit-outsider@example.com')
+    expect((await outsider.patch(endpoint, { data: { title: 'Unauthorized' } })).status()).toBe(403)
+    await outsider.post('/api/workspaces.php?action=join', { data: { invite_code: workspace.invite_code } })
+    const edit = await outsider.patch(endpoint, { data: { title: '  Edit dari Member  ' } })
+    expect(edit.status()).toBe(200)
+    expect((await edit.json()).task).toMatchObject({ title: 'Edit dari Member', description: task.description, status: task.status, deadline: task.deadline, created_at: task.created_at, created_by: task.created_by })
+  } finally { await outsider.dispose() }
+  const other = await createWorkspace(page.request, 'Workspace Edit Lain')
+  expect((await page.request.patch(tasksPath(other.id, task.id), { data: { title: 'Lintas Workspace' } })).status()).toBe(404)
+})
+
+test('form edit mempertahankan input saat gagal, validasi judul, dan kembali ke login jika session habis', async ({ page }) => {
+  await register(page.request, 'edit-failure@example.com')
+  const workspace = await createWorkspace(page.request, 'Edit Gagal')
+  await page.request.post(tasksPath(workspace.id), { data: { title: 'Task Edit Gagal', description: 'Detail semula' } })
+  await page.goto(`/#workspace=${workspace.id}`)
+  await page.getByRole('button', { name: 'Edit task Task Edit Gagal' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Edit task' })
+  await dialog.getByLabel('Judul task').fill('  ')
+  await dialog.getByRole('button', { name: 'Simpan perubahan' }).click()
+  await expect(dialog.getByText('Judul task perlu diisi.')).toBeVisible()
+  await dialog.getByLabel('Judul task').fill('Belum Tersimpan')
+  await page.route('**/api/tasks.php*', (route) => route.request().method() === 'PATCH' ? route.fulfill({ status: 500, json: { error: 'Edit gagal disimpan.' } }) : route.continue())
+  await dialog.getByRole('button', { name: 'Simpan perubahan' }).click()
+  await expect(dialog.getByRole('alert')).toContainText('Edit gagal disimpan.')
+  await expect(dialog.getByLabel('Judul task')).toHaveValue('Belum Tersimpan')
+  await expect(page.getByRole('article', { name: 'Task Edit Gagal' })).toBeVisible()
+  expect((await (await page.request.get(tasksPath(workspace.id))).json()).tasks[0].title).toBe('Task Edit Gagal')
+  await page.unroute('**/api/tasks.php*')
+  await page.request.post('/api/auth.php?action=logout')
+  await dialog.getByRole('button', { name: 'Simpan perubahan' }).click()
+  await expect(page.getByRole('heading', { name: 'Selamat datang kembali.' })).toBeVisible()
+})
+
+
+test('pembuat dan penyelesai berbeda, edit mempertahankan catatan, buka ulang dan selesai lagi', async ({ page, playwright, baseURL }) => {
+  const owner = await register(page.request, 'attribution-owner@example.com', 'Pembuat Tugas')
+  const workspace = await createWorkspace(page.request, 'Tim Pelacakan Task')
+  const task = (await (await page.request.post(tasksPath(workspace.id), { data: { title: 'Task Bersama', description: '', created_by: 'spoof', completed_by: 'spoof' } })).json()).task
+  expect(task).toMatchObject({ created_by: owner.id, creator_name: 'Pembuat Tugas', completed_by: null, completed_at: null, completer_name: null })
+  const member = await otherAccount(playwright, baseURL, 'attribution-member@example.com', 'Penyelesai Tugas')
+  try {
+    await member.api.post('/api/workspaces.php?action=join', { data: { invite_code: workspace.invite_code } })
+    const endpoint = tasksPath(workspace.id, task.id)
+    const finish = await member.api.patch(endpoint, { data: { status: 'done', completed_by: owner.id, completed_at: '2000-01-01' } })
+    expect(finish.status()).toBe(200)
+    const done = (await finish.json()).task
+    expect(done).toMatchObject({ created_by: owner.id, completed_by: member.user.id, creator_name: 'Pembuat Tugas', completer_name: 'Penyelesai Tugas' })
+    expect(Number.isNaN(Date.parse(done.completed_at))).toBe(false)
+    await page.goto(`/#workspace=${workspace.id}`)
+    const card = page.getByRole('article', { name: task.title })
+    await expect(card).toContainText('Dibuat oleh: Pembuat Tugas')
+    await expect(card).toContainText('Diselesaikan oleh: Penyelesai Tugas')
+    await expect(card).toContainText('WIB')
+    await page.reload()
+    await expect(card).toContainText('Diselesaikan oleh: Penyelesai Tugas')
+    const edited = (await (await page.request.patch(endpoint, { data: { title: task.title, status: 'done', deadline: '2030-01-01', completed_by: owner.id } })).json()).task
+    expect(edited.completed_by).toBe(member.user.id)
+    expect(edited.completed_at).toBe(done.completed_at)
+    await page.getByLabel(`Status task ${task.title}`).selectOption('in_progress')
+    await expect(card).not.toContainText('Diselesaikan oleh:')
+    const reopened = (await (await page.request.get(tasksPath(workspace.id))).json()).tasks[0]
+    expect(reopened.completed_by).toBeNull()
+    expect(reopened.completed_at).toBeNull()
+    await card.dragTo(region(page, 'Done'))
+    await expect(card).toContainText('Diselesaikan oleh: Pembuat Tugas')
+    const completedAgain = (await (await page.request.get(tasksPath(workspace.id))).json()).tasks[0]
+    expect(completedAgain.completed_by).toBe(owner.id)
+    await page.setViewportSize({ width: 390, height: 844 })
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+    await page.screenshot({ path: 'test-results/task-attribution-mobile.png', fullPage: true })
+    await page.request.delete(`/api/workspaces.php?id=${workspace.id}&action=member&user_id=${member.user.id}`)
+    const otherTask = (await (await page.request.post(tasksPath(workspace.id), { data: { title: 'Langsung selesai', description: '', status: 'done' } })).json()).task
+    expect(otherTask.completed_by).toBe(owner.id)
+    expect(otherTask.completer_name).toBe('Pembuat Tugas')
+  } finally { await member.api.dispose() }
+})
+
+test('nama tetap tersedia setelah anggota dikeluarkan dan catatan lama tidak direkayasa', async ({ page, playwright, baseURL }) => {
+  await register(page.request, 'history-owner@example.com', 'Owner Riwayat')
+  const workspace = await createWorkspace(page.request, 'Riwayat Anggota')
+  const member = await otherAccount(playwright, baseURL, 'history-member@example.com', 'Anggota Lama')
+  try {
+    await member.api.post('/api/workspaces.php?action=join', { data: { invite_code: workspace.invite_code } })
+    const task = (await (await member.api.post(tasksPath(workspace.id), { data: { title: 'Task Anggota Lama', description: '', status: 'done' } })).json()).task
+    await page.request.delete(`/api/workspaces.php?id=${workspace.id}&action=member&user_id=${member.user.id}`)
+    const saved = (await (await page.request.get(tasksPath(workspace.id))).json()).tasks[0]
+    expect(saved).toMatchObject({ created_by: task.created_by, creator_name: 'Anggota Lama', completed_by: task.completed_by, completer_name: 'Anggota Lama', completed_at: task.completed_at })
+    expect((await member.api.patch(tasksPath(workspace.id, task.id), { data: { status: 'todo' } })).status()).toBe(403)
+  } finally { await member.api.dispose() }
+  await page.route('**/api/tasks.php*', (route) => route.fulfill({ json: { tasks: [{ id: 'old-task', title: 'Task selesai lama', description: '', status: 'done', created_at: '2026-10-03T00:00:00Z', creator_name: null, completed_by: null, completed_at: null, completer_name: null }] } }))
+  await page.goto(`/#workspace=${workspace.id}`)
+  const card = page.getByRole('article', { name: 'Task selesai lama' })
+  await expect(card).toContainText('Dibuat oleh: Belum tercatat')
+  await expect(card).toContainText('Diselesaikan oleh: Belum tercatat')
+})
+
+
+test('statistik menghitung status custom, tanggal WIB, anggota lama dan data belum tercatat', () => {
+  const tasks = [
+    { status: 'done', created_by: 'a', creator_name: 'A', completed_by: 'b', completer_name: 'B', completed_at: '2026-10-03T00:00:00Z', deadline: '2020-01-01' },
+    { status: 'review', created_by: 'b', creator_name: 'B', deadline: '2026-10-04' },
+    { status: 'todo', created_by: null, deadline: '2026-10-03' },
+    { status: 'done', created_by: 'a', creator_name: 'A', completed_by: null, completed_at: null },
+  ]
+  const stats = workspaceStatistics(tasks, [{ id: 'done' }, { id: 'review' }, { id: 'todo' }], [{ id: 'a', name: 'A' }, { id: 'c', name: 'C' }], new Date('2026-10-03T18:00:00Z'))
+  expect(stats).toMatchObject({ total: 4, done: 2, open: 2, progress: 50, overdue: 1, dueSoon: 1, unknownCompletion: 1, noDeadline: 1 })
+  expect(stats.people.find((person) => person.id === 'a')).toMatchObject({ created: 2, completed: 0, active: true })
+  expect(stats.people.find((person) => person.id === 'b')).toMatchObject({ created: 1, completed: 1, active: false })
+  expect(stats.people.find((person) => person.id === 'c')).toMatchObject({ created: 0, completed: 0 })
+  expect(stats.people.find((person) => person.id === 'unrecorded')).toMatchObject({ created: 1, completed: 1 })
+  expect(stats.statuses.map((status) => status.count)).toEqual([2, 1, 1])
+  expect(workspaceStatistics([], [], []).progress).toBe(0)
+})
+
+test('tombol statistik: hitungan anggota, detail selesai, reload, refresh, mobile, kembali board', async ({ page, playwright, baseURL }) => {
+  const owner = await register(page.request, 'stats-owner@example.com', 'Owner Statistik')
+  const workspace = await createWorkspace(page.request, 'Workspace Statistik A')
+  const other = await createWorkspace(page.request, 'Workspace Statistik B')
+  await page.request.post(tasksPath(other.id), { data: { title: 'Task workspace lain', description: '', status: 'done' } })
+  await page.request.post(tasksPath(workspace.id), { data: { title: 'Task Terlambat', description: '', deadline: '2020-01-01' } })
+  await page.request.post(tasksPath(workspace.id), { data: { title: 'Task Owner Selesai', description: '', status: 'done' } })
+  const member = await otherAccount(playwright, baseURL, 'stats-member@example.com', 'Member Statistik')
+  try {
+    await member.api.post('/api/workspaces.php?action=join', { data: { invite_code: workspace.invite_code } })
+    await member.api.post(tasksPath(workspace.id), { data: { title: 'Task Member Selesai', description: '', status: 'done' } })
+    await page.goto(`/#workspace=${workspace.id}`)
+    await page.getByRole('button', { name: 'Statistik', exact: true }).click()
+    await expect(page).toHaveURL(/view=statistics/)
+    await expect(page.getByRole('heading', { name: 'Statistik workspace', exact: true })).toBeVisible()
+    await expect(page.getByLabel('Total task', { exact: true })).toContainText('3')
+    await expect(page.getByLabel('Selesai', { exact: true })).toContainText('2')
+    await expect(page.getByLabel('Belum selesai', { exact: true })).toContainText('1')
+    await expect(page.getByLabel('Terlambat', { exact: true })).toContainText('1')
+    await expect(page.getByText('Progress 67%', { exact: false })).toBeVisible()
+    const contribution = page.getByRole('region', { name: 'Kontribusi anggota' })
+    await expect(contribution.getByRole('row', { name: 'Owner Statistik Anggota aktif 2 1' })).toBeVisible()
+    await expect(contribution.getByRole('row', { name: 'Member Statistik Anggota aktif 1 1' })).toBeVisible()
+    await expect(page.getByRole('region', { name: 'Detail task selesai' })).toContainText('Task Member Selesai')
+    await expect(page.getByText('Task workspace lain')).toHaveCount(0)
+    await page.reload()
+    await expect(page.getByLabel('Total task', { exact: true })).toContainText('3')
+    await page.request.post(tasksPath(workspace.id), { data: { title: 'Task Baru', description: '' } })
+    await page.getByRole('button', { name: 'Perbarui statistik' }).click()
+    await expect(page.getByLabel('Total task', { exact: true })).toContainText('4')
+    await page.screenshot({ path: 'test-results/statistics-desktop.png', fullPage: true })
+    for (const width of [320, 390, 768]) {
+      await page.setViewportSize({ width, height: 844 })
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+    }
+    await page.setViewportSize({ width: 390, height: 844 })
+    await page.screenshot({ path: 'test-results/statistics-mobile.png', fullPage: true })
+    await page.getByRole('button', { name: 'Kembali ke board' }).click()
+    await expect(page.getByRole('heading', { name: 'Workspace Statistik A.' })).toBeVisible()
+    await page.getByRole('button', { name: 'Statistik', exact: true }).click()
+    await expect(page.getByLabel('Total task', { exact: true })).toContainText('4')
+    await page.goBack()
+    await expect(page.getByRole('heading', { name: 'Workspace Statistik A.' })).toBeVisible()
+    expect(owner.id).toBeTruthy()
+  } finally { await member.api.dispose() }
+})
+
+test('statistik workspace kosong dan kegagalan API tidak menampilkan angka palsu', async ({ page }) => {
+  await register(page.request, 'stats-empty@example.com')
+  const workspace = await createWorkspace(page.request, 'Statistik Kosong')
+  await page.goto(`/#workspace=${workspace.id}&view=statistics`)
+  await expect(page.getByLabel('Total task', { exact: true })).toContainText('0')
+  await expect(page.getByText('Belum ada task yang selesai.')).toBeVisible()
+  await page.route('**/api/tasks.php*', (route) => route.fulfill({ status: 403, json: { error: 'Akses workspace telah dicabut.' } }))
+  await page.getByRole('button', { name: 'Perbarui statistik' }).click()
+  await expect(page.getByRole('alert')).toContainText('Akses workspace telah dicabut.')
+  await expect(page.getByLabel('Total task', { exact: true })).toHaveCount(0)
+  await page.unroute('**/api/tasks.php*')
+  await page.getByRole('button', { name: 'Coba lagi', exact: true }).click()
+  await expect(page.getByLabel('Total task', { exact: true })).toContainText('0')
 })

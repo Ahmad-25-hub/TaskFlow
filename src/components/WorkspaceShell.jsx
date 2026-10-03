@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { ArrowUpRight, FolderKanban, KeyRound, LoaderCircle, Plus, Users } from 'lucide-react'
 import Navbar from './Navbar'
 import WorkspaceBoard from './WorkspaceBoard'
+import WorkspaceStatistics from './WorkspaceStatistics'
 import WorkspaceForm from './WorkspaceForm'
 import { workspaceApi } from '../api/workspaces'
 
@@ -9,6 +10,7 @@ const routeId = () => new URLSearchParams(window.location.hash.slice(1)).get('wo
 
 export default function WorkspaceShell({ user, onLogout }) {
   const [workspaces, setWorkspaces] = useState([])
+  const [view, setView] = useState(() => new URLSearchParams(window.location.hash.slice(1)).get('view'))
   const [activeId, setActiveId] = useState(routeId)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -20,6 +22,7 @@ export default function WorkspaceShell({ user, onLogout }) {
     const changed = () => {
       const id = routeId()
       setActiveId(id)
+      setView(new URLSearchParams(window.location.hash.slice(1)).get('view'))
       if (id && !workspaces.some((workspace) => workspace.id === id)) {
         setLoading(true); setError(''); setAttempt((value) => value + 1)
       }
@@ -39,9 +42,9 @@ export default function WorkspaceShell({ user, onLogout }) {
 
   function goHome() {
     window.location.assign('#')
-    setActiveId(''); setLoading(true); setError(''); setAttempt((value) => value + 1)
+    setView(null); setActiveId(''); setLoading(true); setError(''); setAttempt((value) => value + 1)
   }
-  function open(workspace) { window.location.assign(`#workspace=${workspace.id}`); setActiveId(workspace.id) }
+  function open(workspace) { window.location.assign(`#workspace=${workspace.id}`); setActiveId(workspace.id); setView(null) }
   function updated(workspace) { setWorkspaces((current) => current.map((item) => item.id === workspace.id ? { ...item, ...workspace } : item)) }
   function created(workspace) {
     setWorkspaces((current) => [{ task_count: 0, ...workspace }, ...current.filter((item) => item.id !== workspace.id)])
@@ -52,7 +55,8 @@ export default function WorkspaceShell({ user, onLogout }) {
     <div className="app-page">
       <Navbar user={user} onHome={goHome} onLogout={onLogout} />
       {loading ? <div className="page-loading"><LoaderCircle size={22} className="animate-spin" />Memuat workspace...</div> : active ? (
-        <WorkspaceBoard key={active.id} workspace={active} onBack={goHome} onUpdated={updated} />
+        view === 'statistics' ? <WorkspaceStatistics key={active.id} workspace={active} onBack={() => open(active)} /> :
+        <WorkspaceBoard key={active.id} workspace={active} onBack={goHome} onUpdated={updated} onStatistics={() => { window.location.assign(`#workspace=${active.id}&view=statistics`); setView('statistics') }} />
       ) : (
         <main className="overview-main">
           <div className="overview-header">
