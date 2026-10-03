@@ -442,6 +442,30 @@ test('mode gelap dan terang berlaku di login dan papan serta tersimpan setelah r
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light')
 })
 
+test('perpindahan task memberi animasi singkat dan menghormati reduced motion', async ({ page }) => {
+  await register(page.request, 'motion@example.com')
+  const workspace = await createWorkspace(page.request, 'Papan Animasi')
+  await page.request.post(tasksPath(workspace.id), { data: { title: 'Task Bergerak', description: '' } })
+  await page.addInitScript(() => {
+    window.taskflowAnimations = []
+    const animate = Element.prototype.animate
+    Element.prototype.animate = function (frames, options) {
+      window.taskflowAnimations.push({ taskId: this.dataset.taskId, duration: options.duration })
+      return animate.call(this, frames, options)
+    }
+  })
+  await page.goto(`/#workspace=${workspace.id}`)
+  await page.getByLabel('Status task Task Bergerak').selectOption('in_progress')
+  await expect(region(page, 'In Progress').getByRole('article', { name: 'Task Bergerak' })).toBeVisible()
+  expect(await page.evaluate(() => window.taskflowAnimations.some((item) => item.taskId && item.duration === 280))).toBe(true)
+
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await page.evaluate(() => { window.taskflowAnimations = [] })
+  await page.getByLabel('Status task Task Bergerak').selectOption('done')
+  await expect(region(page, 'Done').getByRole('article', { name: 'Task Bergerak' })).toBeVisible()
+  expect(await page.evaluate(() => window.taskflowAnimations.length)).toBe(0)
+})
+
 test('edit task mengisi data lama, menyimpan semua field, batal, dan reload', async ({ page }) => {
   await register(page.request, 'edit-task@example.com')
   const workspace = await createWorkspace(page.request, 'Tim Edit Task')

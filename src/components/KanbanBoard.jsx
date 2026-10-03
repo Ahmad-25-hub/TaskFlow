@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 import { Plus } from 'lucide-react'
 import KanbanColumn from './KanbanColumn'
 import { TASK_STATUSES } from '../data/tasks'
@@ -24,6 +24,42 @@ export default function KanbanBoard({
   const [draggedColumnId, setDraggedColumnId] = useState(null)
   const [columnTarget, setColumnTarget] = useState(null)
   const boardRef = useRef(null)
+  const previousPositions = useRef({ tasks: new Map(), columns: new Map() })
+
+  useLayoutEffect(() => {
+    const board = boardRef.current
+    if (!board) return
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    const nextTasks = new Map()
+    const nextColumns = new Map()
+    board.querySelectorAll('[data-column-id]').forEach((element, index) => {
+      const id = element.dataset.columnId
+      const rect = element.getBoundingClientRect()
+      const previous = previousPositions.current.columns.get(id)
+      if (!reduceMotion && previous && previous.index !== index) {
+        element.animate([
+          { transform: `translate(${previous.rect.left - rect.left}px, ${previous.rect.top - rect.top}px)` },
+          { transform: 'translate(0, 0)' },
+        ], { duration: 240, easing: 'cubic-bezier(.2,.8,.2,1)' })
+      }
+      nextColumns.set(id, { index, rect })
+    })
+    board.querySelectorAll('[data-task-id]').forEach((element) => {
+      const id = element.dataset.taskId
+      const columnId = element.closest('[data-column-id]')?.dataset.columnId
+      const rect = element.getBoundingClientRect()
+      const previous = previousPositions.current.tasks.get(id)
+      if (!reduceMotion && previous && previous.columnId !== columnId) {
+        const distance = (value) => Math.max(-72, Math.min(72, value))
+        element.animate([
+          { transform: `translate(${distance(previous.rect.left - rect.left)}px, ${distance(previous.rect.top - rect.top)}px) scale(.98)`, opacity: .65 },
+          { transform: 'translate(0, 0) scale(1)', opacity: 1 },
+        ], { duration: 280, easing: 'cubic-bezier(.2,.8,.2,1)' })
+      }
+      nextTasks.set(id, { columnId, rect })
+    })
+    previousPositions.current = { tasks: nextTasks, columns: nextColumns }
+  }, [tasks, columns])
 
   function endColumnDrag() {
     setDraggedColumnId(null)

@@ -19,7 +19,7 @@ export default function TaskCard({ columns = TASK_STATUSES, task, onEdit, onDele
   }
 
   return (
-    <article aria-label={task.title} aria-busy={isBusy} className={`task-card ${isDragging ? 'is-dragging' : ''}`} draggable={!isBusy && !editingDeadline} onDragStart={handleDragStart} onDragEnd={() => onDragChange(null)}>
+    <article data-task-id={task.id} aria-label={task.title} aria-busy={isBusy} className={`task-card ${isDragging ? 'is-dragging' : ''}`} draggable={!isBusy && !editingDeadline} onDragStart={handleDragStart} onDragEnd={() => onDragChange(null)}>
       <div className="mb-2 flex items-center justify-between">
         <span className={`task-card-accent tag-${status.color}`} aria-hidden="true" />
         <div className="flex items-center gap-1">
