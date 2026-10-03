@@ -1,11 +1,22 @@
 CREATE DATABASE IF NOT EXISTS taskflow CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE taskflow;
 
+CREATE TABLE IF NOT EXISTS columns (
+  id VARCHAR(50) NOT NULL PRIMARY KEY,
+  label VARCHAR(50) NOT NULL,
+  description VARCHAR(255) NOT NULL DEFAULT '',
+  color VARCHAR(30) NOT NULL DEFAULT 'indigo',
+  sort_order INT NOT NULL DEFAULT 0,
+  created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS tasks (
   id CHAR(36) NOT NULL PRIMARY KEY,
   title VARCHAR(120) NOT NULL,
   description TEXT NOT NULL,
-  status ENUM('todo', 'in_progress', 'done') NOT NULL DEFAULT 'todo',
+  status VARCHAR(50) NOT NULL DEFAULT 'todo',
   created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-  INDEX idx_tasks_created_at (created_at)
+  INDEX idx_tasks_created_at (created_at),
+  INDEX idx_tasks_status (status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+

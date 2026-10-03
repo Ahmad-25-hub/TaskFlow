@@ -2,10 +2,10 @@ import { useEffect, useRef, useState } from 'react'
 import { ArrowRight, Plus, X } from 'lucide-react'
 import { TASK_STATUSES } from '../data/tasks'
 
-export default function AddTaskModal({ defaultStatus, onClose, onSubmit, serverError }) {
+export default function AddTaskModal({ defaultStatus, columns = TASK_STATUSES, onClose, onSubmit, serverError }) {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
-  const [status, setStatus] = useState(defaultStatus)
+  const [status, setStatus] = useState(defaultStatus || (columns[0]?.id ?? 'todo'))
   const [error, setError] = useState('')
   const dialogRef = useRef(null)
   const titleRef = useRef(null)
@@ -60,7 +60,7 @@ export default function AddTaskModal({ defaultStatus, onClose, onSubmit, serverE
           <div className="mt-4">
             <label htmlFor="task-status" className="form-label">Status awal</label>
             <select id="task-status" value={status} onChange={(event) => setStatus(event.target.value)} className="field mt-2 w-full px-3.5 py-3 text-sm">
-              {TASK_STATUSES.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
+              {columns.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
             </select>
           </div>
           <div className="mt-7 flex items-center justify-end gap-3 border-t border-slate-100 pt-5">

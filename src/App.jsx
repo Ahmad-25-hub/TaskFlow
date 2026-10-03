@@ -1,19 +1,24 @@
 import { useEffect, useState } from 'react'
-import { ArrowUpRight, CheckCheck, LayoutGrid, Plus, Search, X } from 'lucide-react'
+import { ArrowUpRight, CheckCheck, Columns3, LayoutGrid, Plus, Search, X } from 'lucide-react'
 import Navbar from './components/Navbar'
 import KanbanBoard from './components/KanbanBoard'
 import AddTaskModal from './components/AddTaskModal'
+import AddColumnModal from './components/AddColumnModal'
 import { TASK_STATUSES } from './data/tasks'
 import { taskApi } from './api/tasks'
+import { columnApi } from './api/columns'
 
 export default function App() {
   const [tasks, setTasks] = useState([])
+  const [columns, setColumns] = useState(TASK_STATUSES)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [modalStatus, setModalStatus] = useState(null)
+  const [isAddColumnOpen, setIsAddColumnOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [notice, setNotice] = useState('')
+
   const completed = tasks.filter((task) => task.status === 'done').length
   const progress = tasks.length ? Math.round((completed / tasks.length) * 100) : 0
   const filteredTasks = tasks.filter((task) => {
@@ -22,7 +27,15 @@ export default function App() {
   })
 
   useEffect(() => {
-    taskApi.list().then(setTasks).catch((issue) => setError(issue.message)).finally(() => setLoading(false))
+    Promise.all([
+      taskApi.list().catch((issue) => { setError(issue.message); return [] }),
+      columnApi.list().catch(() => TASK_STATUSES),
+    ]).then(([loadedTasks, loadedColumns]) => {
+      setTasks(loadedTasks)
+      if (loadedColumns && loadedColumns.length > 0) {
+        setColumns(loadedColumns)
+      }
+    }).finally(() => setLoading(false))
   }, [])
 
   useEffect(() => {
@@ -43,6 +56,33 @@ export default function App() {
     } catch (issue) { setError(issue.message) }
   }
 
+  async function addColumn(values) {
+    try {
+      const newCol = await columnApi.create(values)
+      setColumns((current) => [...current, newCol])
+      setIsAddColumnOpen(false)
+      setError('')
+      setNotice(`Kolom “${newCol.label}” berhasil ditambahkan.`)
+    } catch (issue) {
+      setError(issue.message)
+    }
+  }
+
+  async function deleteColumn(id, label) {
+    const confirmed = window.confirm(`Apakah Anda yakin ingin menghapus kolom “${label}”? Semua task di kolom ini akan dipindahkan ke To Do.`)
+    if (!confirmed) return
+    try {
+      await columnApi.remove(id)
+      setColumns((current) => current.filter((col) => col.id !== id))
+      setTasks((current) => current.map((task) => task.status === id ? { ...task, status: 'todo' } : task))
+      if (statusFilter === id) setStatusFilter('all')
+      setError('')
+      setNotice(`Kolom “${label}” berhasil dihapus.`)
+    } catch (issue) {
+      setError(issue.message)
+    }
+  }
+
   async function deleteTask(id) {
     try {
       await taskApi.remove(id)
@@ -53,12 +93,13 @@ export default function App() {
   }
 
   async function moveTask(id, status) {
-    if (!TASK_STATUSES.some((item) => item.id === status)) return
+    if (!columns.some((item) => item.id === status)) return
     try {
       await taskApi.move(id, status)
       setTasks((current) => current.map((task) => task.id === id ? { ...task, status } : task))
       setError('')
-      setNotice(`Task dipindahkan ke ${TASK_STATUSES.find((item) => item.id === status).label}.`)
+      const targetCol = columns.find((item) => item.id === status)
+      setNotice(`Task dipindahkan ke ${targetCol?.label || status}.`)
     } catch (issue) { setError(issue.message) }
   }
 
@@ -96,6 +137,7 @@ export default function App() {
               <span className="flex size-9 items-center justify-center rounded-xl bg-indigo-100/70 text-indigo-600"><LayoutGrid size={18} /></span>
               <h2 className="text-base font-bold">Project board</h2>
               <span className="rounded-md bg-slate-200/60 px-2 py-1 text-xs font-medium text-slate-500">{tasks.length} task</span>
+              <span className="rounded-md bg-indigo-50 px-2 py-1 text-xs font-medium text-indigo-600">{columns.length} kolom</span>
             </div>
             <div className="flex flex-wrap items-center gap-3">
               <label className="relative min-w-0 flex-1 sm:w-52 sm:flex-none">
@@ -103,28 +145,75 @@ export default function App() {
                 <input aria-label="Cari task" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Cari task..." className="field w-full py-2.5 pl-9 pr-8 text-xs" />
                 {query && <button type="button" aria-label="Bersihkan pencarian" onClick={() => setQuery('')} className="absolute right-2 top-2.5 text-slate-400 hover:text-slate-700"><X size={16} /></button>}
               </label>
-              <button type="button" className="primary-button" onClick={() => setModalStatus('todo')}><Plus size={17} />Tambah task</button>
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={() => setIsAddColumnOpen(true)}
+              >
+                <Columns3 size={15} />
+                Tambah kolom
+              </button>
+              <button
+                type="button"
+                className="primary-button"
+                onClick={() => setModalStatus(columns[0]?.id || 'todo')}
+              >
+                <Plus size={17} />
+                Tambah task
+              </button>
             </div>
           </div>
           <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-2 text-xs text-slate-500"><span className="size-1.5 rounded-full bg-emerald-500" /><span>Ruang kerja tim kreatifmu</span></div>
+            <div className="flex items-center gap-2 text-xs text-slate-500">
+              <span className="size-1.5 rounded-full bg-emerald-500" />
+              <span>Ruang kerja tim kreatifmu &bull; {columns.length} kolom aktif</span>
+            </div>
             <label className="flex items-center gap-2 text-xs text-slate-500">Tampilkan
               <select aria-label="Filter status" className="rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-xs font-medium text-slate-700" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
                 <option value="all">Semua status</option>
-                {TASK_STATUSES.map((status) => <option key={status.id} value={status.id}>{status.label}</option>)}
+                {columns.map((status) => <option key={status.id} value={status.id}>{status.label}</option>)}
               </select>
             </label>
           </div>
           {error && <p role="alert" className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
-          {loading ? <p className="py-8 text-center text-sm text-slate-500">Memuat task...</p> : <KanbanBoard tasks={filteredTasks} allTasks={tasks} onAddTask={setModalStatus} onDeleteTask={deleteTask} onMoveTask={moveTask} isFiltered={Boolean(query.trim()) || statusFilter !== 'all'} />}
+          {loading ? (
+            <p className="py-8 text-center text-sm text-slate-500">Memuat task...</p>
+          ) : (
+            <KanbanBoard
+              tasks={filteredTasks}
+              allTasks={tasks}
+              columns={columns}
+              onAddTask={setModalStatus}
+              onDeleteTask={deleteTask}
+              onMoveTask={moveTask}
+              onOpenAddColumn={() => setIsAddColumnOpen(true)}
+              onDeleteColumn={deleteColumn}
+              isFiltered={Boolean(query.trim()) || statusFilter !== 'all'}
+            />
+          )}
         </section>
         <footer className="mt-7 flex flex-col items-center justify-between gap-2 text-[11px] text-slate-400 sm:flex-row">
-          <p>Drag kartu antar kolom, atau gunakan pilihan status di kartu.</p>
+          <p>Drag kartu antar kolom, gunakan pilihan status di kartu, atau tambahkan kolom baru sesuai alur tim.</p>
           <p>Data tersimpan di database TaskFlow</p>
         </footer>
       </main>
       <div aria-live="polite" role="status" className={notice ? 'toast' : 'sr-only'}>{notice && <CheckCheck size={18} className="shrink-0 text-emerald-500" />}{notice}</div>
-      {modalStatus && <AddTaskModal defaultStatus={modalStatus} onClose={() => { setModalStatus(null); setError('') }} onSubmit={addTask} serverError={error} />}
+      {modalStatus && (
+        <AddTaskModal
+          defaultStatus={modalStatus}
+          columns={columns}
+          onClose={() => { setModalStatus(null); setError('') }}
+          onSubmit={addTask}
+          serverError={error}
+        />
+      )}
+      {isAddColumnOpen && (
+        <AddColumnModal
+          onClose={() => { setIsAddColumnOpen(false); setError('') }}
+          onSubmit={addColumn}
+          serverError={error}
+        />
+      )}
     </div>
   )
 }

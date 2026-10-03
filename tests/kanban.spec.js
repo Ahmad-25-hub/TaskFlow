@@ -41,3 +41,31 @@ test('task tersimpan setelah reload, dapat dipindah dan dihapus', async ({ page,
     if (id) await request.delete(`/api/tasks.php?id=${encodeURIComponent(id)}`)
   }
 })
+
+test('dapat menambah kolom baru dan menyimpannya di backend', async ({ page, request }) => {
+  const colName = `Review ${Date.now()}`
+  let colId
+  try {
+    await page.goto('/')
+    await page.getByRole('button', { name: 'Tambah kolom', exact: true }).click()
+    await page.getByLabel('Nama kolom').fill(colName)
+    await page.getByLabel('Deskripsi (opsional)').fill('Kolom untuk review kode')
+    await page.getByRole('button', { name: 'Rose' }).click()
+    await page.getByRole('button', { name: 'Buat kolom', exact: true }).click()
+
+    await expect(page.getByRole('region', { name: colName, exact: true })).toBeVisible()
+
+    // Reload halaman untuk memastikan kolom tersimpan di database
+    await page.reload()
+    await expect(page.getByRole('region', { name: colName, exact: true })).toBeVisible()
+
+    const cols = await (await request.get('/api/columns.php')).json()
+    colId = cols.columns.find((c) => c.label === colName)?.id
+    expect(colId).toBeTruthy()
+  } finally {
+    if (colId) {
+      await request.delete(`/api/columns.php?id=${encodeURIComponent(colId)}`)
+    }
+  }
+})
+

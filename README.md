@@ -16,7 +16,7 @@ Di folder proyek, jalankan:
 & 'C:\xampp\mysql\bin\mysql.exe' -u root -e 'source database/seed.sql'
 ```
 
-`schema.sql` membuat database `taskflow` dan tabel `tasks`. `seed.sql` mengisi tujuh task contoh dan aman dijalankan ulang. Konfigurasi API memakai `127.0.0.1:3306`, pengguna `root`, dan kata sandi kosong sesuai XAMPP standar. Jika berbeda, set variabel lingkungan `TASKFLOW_DB_HOST`, `TASKFLOW_DB_PORT`, `TASKFLOW_DB_NAME`, `TASKFLOW_DB_USER`, dan `TASKFLOW_DB_PASSWORD` sebelum menjalankan PHP.
+`schema.sql` membuat database `taskflow`, tabel `columns`, dan tabel `tasks`. `seed.sql` mengisi tiga kolom standar (To Do, In Progress, Done) dan tujuh task contoh. Konfigurasi API memakai `127.0.0.1:3306`, pengguna `root`, dan kata sandi kosong sesuai XAMPP standar. Jika berbeda, set variabel lingkungan `TASKFLOW_DB_HOST`, `TASKFLOW_DB_PORT`, `TASKFLOW_DB_NAME`, `TASKFLOW_DB_USER`, dan `TASKFLOW_DB_PASSWORD` sebelum menjalankan PHP.
 
 ## Menjalankan aplikasi
 
@@ -33,7 +33,7 @@ npm ci
 npm run dev
 ```
 
-Buka http://localhost:5173. Vite meneruskan permintaan `/api` ke server PHP lokal pada port 8000. Data task tersimpan di MySQL sehingga tetap ada setelah halaman dimuat ulang. Kedua server perlu tetap berjalan selama aplikasi digunakan.
+Buka http://localhost:5173. Vite meneruskan permintaan `/api` ke server PHP lokal pada port 8000. Data task dan kolom tersimpan di MySQL sehingga tetap ada setelah halaman dimuat ulang. Kedua server perlu tetap berjalan selama aplikasi digunakan.
 
 ## Pemeriksaan
 
@@ -43,4 +43,7 @@ npm run build
 npm test
 ```
 
-API mendukung `GET /api/tasks.php`, `POST /api/tasks.php`, `PATCH /api/tasks.php?id=<uuid>`, dan `DELETE /api/tasks.php?id=<uuid>`.
+API mendukung:
+- Task: `GET /api/tasks.php`, `POST /api/tasks.php`, `PATCH /api/tasks.php?id=<uuid>`, dan `DELETE /api/tasks.php?id=<uuid>`.
+- Kolom: `GET /api/columns.php`, `POST /api/columns.php`, dan `DELETE /api/columns.php?id=<id>`.
+

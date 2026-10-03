@@ -49,8 +49,8 @@ try {
         $data = payload();
         $title = trim((string)($data['title'] ?? ''));
         $description = trim((string)($data['description'] ?? ''));
-        $status = $data['status'] ?? 'todo';
-        if ($title === '' || mb_strlen($title) > 120 || mb_strlen($description) > 1000 || !in_array($status, ['todo', 'in_progress', 'done'], true)) {
+        $status = trim((string)($data['status'] ?? 'todo'));
+        if ($title === '' || mb_strlen($title) > 120 || mb_strlen($description) > 1000 || $status === '' || mb_strlen($status) > 50) {
             respond(422, ['error' => 'Data task tidak valid.']);
         }
         $id = bin2hex(random_bytes(16));
@@ -64,8 +64,8 @@ try {
     if ($id !== null && !preg_match('/^[a-f0-9-]{36}$/i', $id)) respond(400, ['error' => 'ID task tidak valid.']);
     if ($method === 'PATCH' && $id !== null) {
         $data = payload();
-        $status = $data['status'] ?? null;
-        if (!in_array($status, ['todo', 'in_progress', 'done'], true)) respond(422, ['error' => 'Status tidak valid.']);
+        $status = trim((string)($data['status'] ?? ''));
+        if ($status === '' || mb_strlen($status) > 50) respond(422, ['error' => 'Status tidak valid.']);
         $stmt = $db->prepare('UPDATE tasks SET status = ? WHERE id = ?');
         $stmt->execute([$status, $id]);
         if (!$stmt->rowCount()) {

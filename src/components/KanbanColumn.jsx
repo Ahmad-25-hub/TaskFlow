@@ -1,12 +1,26 @@
 import { useState } from 'react'
-import { CircleDashed, CircleCheck, CircleDot, Plus } from 'lucide-react'
+import { CircleDashed, CircleCheck, CircleDot, Plus, Trash2, Layers } from 'lucide-react'
 import TaskCard from './TaskCard'
 
 const icons = { todo: CircleDashed, in_progress: CircleDot, done: CircleCheck }
 
-export default function KanbanColumn({ status, tasks, totalCount, onAddTask, onDeleteTask, onMoveTask, onDropTask, draggedId, onDragChange, isFiltered }) {
+export default function KanbanColumn({
+  status,
+  columns,
+  tasks,
+  totalCount,
+  onAddTask,
+  onDeleteTask,
+  onMoveTask,
+  onDropTask,
+  onDeleteColumn,
+  draggedId,
+  onDragChange,
+  isFiltered,
+}) {
   const [isOver, setIsOver] = useState(false)
-  const StatusIcon = icons[status.id]
+  const StatusIcon = icons[status.id] || Layers
+  const isDefaultColumn = ['todo', 'in_progress', 'done'].includes(status.id)
 
   function handleDragOver(event) {
     if (!draggedId) return
@@ -18,23 +32,51 @@ export default function KanbanColumn({ status, tasks, totalCount, onAddTask, onD
   return (
     <section
       aria-label={status.label}
-      className={`kanban-column column-${status.color} ${isOver && draggedId ? 'drop-active' : ''}`}
+      className={`kanban-column column-${status.color || 'indigo'} ${isOver && draggedId ? 'drop-active' : ''}`}
       onDragOver={handleDragOver}
       onDragLeave={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setIsOver(false) }}
       onDrop={(event) => { setIsOver(false); onDropTask(event, status.id) }}
     >
       <div className="mb-1 flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <StatusIcon size={17} className="column-icon" />
-          <h3 className="text-sm font-bold">{status.label}</h3>
-          <span className="column-count">{isFiltered ? `${tasks.length}/${totalCount}` : totalCount}</span>
+        <div className="flex items-center gap-2.5 min-w-0 pr-2">
+          <StatusIcon size={17} className="column-icon shrink-0" />
+          <h3 className="text-sm font-bold truncate" title={status.label}>{status.label}</h3>
+          <span className="column-count shrink-0">{isFiltered ? `${tasks.length}/${totalCount}` : totalCount}</span>
         </div>
-        <button type="button" aria-label={`Tambah task ke ${status.label}`} className="column-add" onClick={() => onAddTask(status.id)}><Plus size={18} /></button>
+        <div className="flex items-center gap-1 shrink-0">
+          {!isDefaultColumn && onDeleteColumn && (
+            <button
+              type="button"
+              aria-label={`Hapus kolom ${status.label}`}
+              className="column-delete"
+              onClick={() => onDeleteColumn(status.id, status.label)}
+              title="Hapus kolom ini"
+            >
+              <Trash2 size={13} />
+            </button>
+          )}
+          <button
+            type="button"
+            aria-label={`Tambah task ke ${status.label}`}
+            className="column-add"
+            onClick={() => onAddTask(status.id)}
+          >
+            <Plus size={18} />
+          </button>
+        </div>
       </div>
-      <p className="mb-5 text-[11px] text-slate-400">{status.description}</p>
+      <p className="mb-5 text-[11px] text-slate-400 truncate" title={status.description}>{status.description || 'Tahapan alur kerja'}</p>
       <div className="flex flex-col gap-3.5">
         {tasks.map((task) => (
-          <TaskCard key={task.id} task={task} onDelete={onDeleteTask} onMove={onMoveTask} onDragChange={onDragChange} isDragging={draggedId === task.id} />
+          <TaskCard
+            key={task.id}
+            task={task}
+            columns={columns}
+            onDelete={onDeleteTask}
+            onMove={onMoveTask}
+            onDragChange={onDragChange}
+            isDragging={draggedId === task.id}
+          />
         ))}
         {tasks.length === 0 && (
           <div className="empty-column">

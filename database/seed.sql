@@ -1,5 +1,10 @@
 USE taskflow;
 
+INSERT IGNORE INTO columns (id, label, description, color, sort_order) VALUES
+('todo', 'To Do', 'Ide yang siap dikerjakan', 'indigo', 1),
+('in_progress', 'In Progress', 'Sedang dibawa jadi nyata', 'amber', 2),
+('done', 'Done', 'Satu langkah lebih dekat', 'emerald', 3);
+
 INSERT IGNORE INTO tasks (id, title, description, status, created_at) VALUES
 ('00000000-0000-4000-8000-000000000001', 'Rancang landing page', 'Buat wireframe halaman utama yang memperkenalkan produk dan manfaatnya dengan jelas.', 'todo', '2026-10-01 01:00:00.000'),
 ('00000000-0000-4000-8000-000000000002', 'Eksplorasi palet warna', 'Cari kombinasi warna yang fresh, nyaman di mata, dan sesuai dengan karakter produk.', 'todo', '2026-10-02 02:00:00.000'),
