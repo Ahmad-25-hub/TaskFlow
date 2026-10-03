@@ -4,6 +4,7 @@ import KanbanColumn from './KanbanColumn'
 import { TASK_STATUSES } from '../data/tasks'
 
 export default function KanbanBoard({
+  pendingIds = new Set(),
   tasks,
   allTasks,
   columns = TASK_STATUSES,
@@ -20,15 +21,16 @@ export default function KanbanBoard({
     event.preventDefault()
     const id = event.dataTransfer.getData('text/plain')
     const task = allTasks.find((item) => item.id === id)
-    if (task && task.status !== status) onMoveTask(id, status)
+    if (task && !pendingIds.has(id) && task.status !== status) onMoveTask(id, status)
     setDraggedId(null)
   }
 
   return (
     <div className="flex flex-col md:flex-row items-stretch md:items-start gap-5 overflow-x-auto pb-4 pt-1">
       {columns.map((status) => (
-        <div key={status.id} className="w-full md:min-w-[310px] md:flex-1 shrink-0">
+        <div key={status.id} className="w-full md:w-[310px] md:min-w-[310px] md:flex-1 shrink-0">
           <KanbanColumn
+            pendingIds={pendingIds}
             status={status}
             columns={columns}
             tasks={tasks.filter((task) => task.status === status.id)}

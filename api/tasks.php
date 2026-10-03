@@ -1,88 +1,58 @@
 <?php
-declare(strict_types=1);
-
-header('Content-Type: application/json; charset=utf-8');
-header('Cache-Control: no-store');
-
-function respond(int $status, array $body): never {
-    http_response_code($status);
-    echo json_encode($body, JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
-    exit;
+require __DIR__ . '/bootstrap.php';
+$db = database();
+$user = requireUser($db);
+$workspaceId = $_GET['workspace_id'] ?? '';
+if (!is_string($workspaceId)) respond(422, ['error' => 'Workspace tidak valid.']);
+workspaceAccess($db, $workspaceId, $user['id']);
+$method = $_SERVER['REQUEST_METHOD'];
+if (in_array($method, ['POST', 'PATCH', 'DELETE'], true)) {
+    $db->beginTransaction();
+    $db->prepare('SELECT id FROM workspaces WHERE id = ? FOR UPDATE')->execute([$workspaceId]);
+    workspaceAccess($db, $workspaceId, $user['id']);
 }
+$id = $_GET['id'] ?? null;
 
 function taskRow(array $row): array {
-    return [
-        'id' => $row['id'],
-        'title' => $row['title'],
-        'description' => $row['description'],
-        'status' => $row['status'],
-        'created_at' => (new DateTimeImmutable($row['created_at'], new DateTimeZone('UTC')))->format('Y-m-d\TH:i:s.v\Z'),
-    ];
+    $row['created_at'] = (new DateTimeImmutable($row['created_at'], new DateTimeZone('UTC')))->format('Y-m-d\TH:i:s.v\Z');
+    return $row;
 }
-
-function payload(): array {
-    $data = json_decode(file_get_contents('php://input'), true);
-    if (!is_array($data)) respond(400, ['error' => 'JSON tidak valid.']);
-    return $data;
+function findTask(PDO $db, string $id, string $workspaceId): array {
+    $stmt = $db->prepare('SELECT * FROM tasks WHERE id = ? AND workspace_id = ?');
+    $stmt->execute([$id, $workspaceId]);
+    $task = $stmt->fetch();
+    if (!$task) respond(404, ['error' => 'Task tidak ditemukan di workspace ini.']);
+    return taskRow($task);
 }
-
-try {
-    $host = getenv('TASKFLOW_DB_HOST') ?: '127.0.0.1';
-    $port = getenv('TASKFLOW_DB_PORT') ?: '3306';
-    $name = getenv('TASKFLOW_DB_NAME') ?: 'taskflow';
-    $user = getenv('TASKFLOW_DB_USER') ?: 'root';
-    $password = getenv('TASKFLOW_DB_PASSWORD') ?: '';
-    $db = new PDO("mysql:host=$host;port=$port;dbname=$name;charset=utf8mb4", $user, $password, [
-        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-        PDO::ATTR_EMULATE_PREPARES => false,
-    ]);
-    $db->exec("SET time_zone = '+00:00'");
-
-    $method = $_SERVER['REQUEST_METHOD'];
-    $id = $_GET['id'] ?? null;
-    if ($method === 'GET' && $id === null) {
-        $rows = $db->query('SELECT id, title, description, status, created_at FROM tasks ORDER BY created_at DESC, id DESC')->fetchAll();
-        respond(200, ['tasks' => array_map('taskRow', $rows)]);
-    }
-    if ($method === 'POST' && $id === null) {
-        $data = payload();
-        $title = trim((string)($data['title'] ?? ''));
-        $description = trim((string)($data['description'] ?? ''));
-        $status = trim((string)($data['status'] ?? 'todo'));
-        if ($title === '' || mb_strlen($title) > 120 || mb_strlen($description) > 1000 || $status === '' || mb_strlen($status) > 50) {
-            respond(422, ['error' => 'Data task tidak valid.']);
-        }
-        $id = bin2hex(random_bytes(16));
-        $id = substr($id, 0, 8) . '-' . substr($id, 8, 4) . '-' . substr($id, 12, 4) . '-' . substr($id, 16, 4) . '-' . substr($id, 20);
-        $stmt = $db->prepare('INSERT INTO tasks (id, title, description, status) VALUES (?, ?, ?, ?)');
-        $stmt->execute([$id, $title, $description, $status]);
-        $stmt = $db->prepare('SELECT id, title, description, status, created_at FROM tasks WHERE id = ?');
-        $stmt->execute([$id]);
-        respond(201, ['task' => taskRow($stmt->fetch())]);
-    }
-    if ($id !== null && !preg_match('/^[a-f0-9-]{36}$/i', $id)) respond(400, ['error' => 'ID task tidak valid.']);
-    if ($method === 'PATCH' && $id !== null) {
-        $data = payload();
-        $status = trim((string)($data['status'] ?? ''));
-        if ($status === '' || mb_strlen($status) > 50) respond(422, ['error' => 'Status tidak valid.']);
-        $stmt = $db->prepare('UPDATE tasks SET status = ? WHERE id = ?');
-        $stmt->execute([$status, $id]);
-        if (!$stmt->rowCount()) {
-            $check = $db->prepare('SELECT id FROM tasks WHERE id = ?');
-            $check->execute([$id]);
-            if (!$check->fetch()) respond(404, ['error' => 'Task tidak ditemukan.']);
-        }
-        respond(200, ['status' => $status]);
-    }
-    if ($method === 'DELETE' && $id !== null) {
-        $stmt = $db->prepare('DELETE FROM tasks WHERE id = ?');
-        $stmt->execute([$id]);
-        if (!$stmt->rowCount()) respond(404, ['error' => 'Task tidak ditemukan.']);
-        respond(200, ['deleted' => true]);
-    }
-    respond(405, ['error' => 'Metode tidak didukung.']);
-} catch (PDOException $error) {
-    error_log($error->getMessage());
-    respond(500, ['error' => 'Koneksi atau operasi database gagal.']);
+if ($method === 'GET' && $id === null) {
+    $stmt = $db->prepare('SELECT * FROM tasks WHERE workspace_id = ? ORDER BY created_at DESC, id DESC');
+    $stmt->execute([$workspaceId]);
+    respond(200, ['tasks' => array_map('taskRow', $stmt->fetchAll())]);
 }
+if ($method === 'POST' && $id === null) {
+    $data = payload();
+    $title = textField($data, 'title', 1, 120);
+    $description = textField($data, 'description', 0, 1000);
+    $status = $data['status'] ?? 'todo';
+    validateTaskColumn($db, $workspaceId, $status);
+    $id = uuid();
+    $db->prepare('INSERT INTO tasks (id, title, description, status, workspace_id, created_by) VALUES (?, ?, ?, ?, ?, ?)')->execute([$id, $title, $description, $status, $workspaceId, $user['id']]);
+    $db->commit();
+    respond(201, ['task' => findTask($db, $id, $workspaceId)]);
+}
+if (!is_string($id) || !preg_match('/^[a-f0-9-]{36}$/i', $id)) respond(400, ['error' => 'ID task tidak valid.']);
+findTask($db, $id, $workspaceId);
+if ($method === 'PATCH') {
+    $data = payload();
+    $status = $data['status'] ?? null;
+    validateTaskColumn($db, $workspaceId, $status);
+    $db->prepare('UPDATE tasks SET status = ? WHERE id = ? AND workspace_id = ?')->execute([$status, $id, $workspaceId]);
+    $db->commit();
+    respond(200, ['task' => findTask($db, $id, $workspaceId)]);
+}
+if ($method === 'DELETE') {
+    $db->prepare('DELETE FROM tasks WHERE id = ? AND workspace_id = ?')->execute([$id, $workspaceId]);
+    $db->commit();
+    respond(200, ['deleted' => true]);
+}
+respond(405, ['error' => 'Metode tidak didukung.']);

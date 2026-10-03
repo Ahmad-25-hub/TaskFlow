@@ -5,6 +5,7 @@ import TaskCard from './TaskCard'
 const icons = { todo: CircleDashed, in_progress: CircleDot, done: CircleCheck }
 
 export default function KanbanColumn({
+  pendingIds = new Set(),
   status,
   columns,
   tasks,
@@ -70,6 +71,7 @@ export default function KanbanColumn({
         {tasks.map((task) => (
           <TaskCard
             key={task.id}
+            isBusy={pendingIds.has(task.id)}
             task={task}
             columns={columns}
             onDelete={onDeleteTask}

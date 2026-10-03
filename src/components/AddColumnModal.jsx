@@ -7,6 +7,7 @@ export default function AddColumnModal({ onClose, onSubmit, serverError }) {
   const [description, setDescription] = useState('')
   const [color, setColor] = useState('purple')
   const [error, setError] = useState('')
+  const [saving, setSaving] = useState(false)
   const dialogRef = useRef(null)
   const inputRef = useRef(null)
 
@@ -21,32 +22,39 @@ export default function AddColumnModal({ onClose, onSubmit, serverError }) {
     }
   }, [])
 
+  useEffect(() => {
+    if (!saving && document.activeElement === document.body) inputRef.current?.focus()
+  }, [saving])
+
   function handleKeyDown(event) {
-    if (event.key === 'Escape') onClose()
+    if (event.key === 'Escape' && !saving) onClose()
     if (event.key !== 'Tab') return
-    const focusable = dialogRef.current.querySelectorAll('button, input, textarea, select')
+    const focusable = dialogRef.current.querySelectorAll('button:not(:disabled), input:not(:disabled), textarea:not(:disabled), select:not(:disabled)')
+    if (!focusable.length) { event.preventDefault(); return }
     const first = focusable[0]
     const last = focusable[focusable.length - 1]
     if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus() }
     if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus() }
   }
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault()
     if (!label.trim()) {
       setError('Nama kolom wajib diisi.')
       inputRef.current?.focus()
       return
     }
-    onSubmit({
+    if (saving) return
+    setSaving(true)
+    try { await onSubmit({
       label: label.trim(),
       description: description.trim(),
       color,
-    })
+    }) } finally { setSaving(false); inputRef.current?.focus() }
   }
 
   return (
-    <div className="modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose() }}>
+    <div className="modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget && !saving) onClose() }}>
       <section
         ref={dialogRef}
         role="dialog"
@@ -70,6 +78,7 @@ export default function AddColumnModal({ onClose, onSubmit, serverError }) {
           </div>
           <button
             type="button"
+                    disabled={saving}
             aria-label="Tutup form"
             className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
             onClick={onClose}
@@ -84,7 +93,7 @@ export default function AddColumnModal({ onClose, onSubmit, serverError }) {
           <label htmlFor="column-label" className="form-label">
             Nama kolom <span className="text-indigo-500">*</span>
           </label>
-          <input
+          <input disabled={saving}
             ref={inputRef}
             id="column-label"
             className="field mt-2 w-full px-3.5 py-3 text-sm"
@@ -102,7 +111,7 @@ export default function AddColumnModal({ onClose, onSubmit, serverError }) {
             <label htmlFor="column-description" className="form-label">
               Deskripsi <span className="font-normal text-slate-400">(opsional)</span>
             </label>
-            <input
+            <input disabled={saving}
               id="column-description"
               maxLength={255}
               value={description}
@@ -121,6 +130,8 @@ export default function AddColumnModal({ onClose, onSubmit, serverError }) {
                   <button
                     key={opt.id}
                     type="button"
+                    disabled={saving}
+                    aria-pressed={isSelected}
                     onClick={() => setColor(opt.id)}
                     className={`flex items-center gap-2 rounded-lg border p-2 text-xs font-medium transition-all ${
                       isSelected
@@ -147,13 +158,14 @@ export default function AddColumnModal({ onClose, onSubmit, serverError }) {
           <div className="mt-7 flex items-center justify-end gap-3 border-t border-slate-100 pt-5">
             <button
               type="button"
+                    disabled={saving}
               onClick={onClose}
               className="rounded-lg px-4 py-2.5 text-xs font-semibold text-slate-500 hover:bg-slate-100"
             >
               Batal
             </button>
-            <button type="submit" className="primary-button">
-              Buat kolom
+            <button disabled={saving} type="submit" className="primary-button">
+              {saving ? 'Menyimpan...' : 'Buat kolom'}
               <ArrowRight size={15} />
             </button>
           </div>

@@ -4,7 +4,8 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "test": "playwright test",
+    "test": "node scripts/test.mjs",
+    "db:migrate": "powershell -NoProfile -Command \"& 'C:\\xampp\\php\\php.exe' database/migrate.php\"",
     "dev": "vite",
     "build": "vite build",
     "lint": "oxlint",
