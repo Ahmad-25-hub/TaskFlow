@@ -9,14 +9,21 @@ export default defineConfig({
   fullyParallel: true,
   workers: 3,
   use: {
-    baseURL: 'http://localhost:5173',
+    baseURL: 'http://127.0.0.1:5173',
     browserName: 'chromium',
     channel: process.env.PLAYWRIGHT_CHANNEL || (installedEdge ? 'msedge' : undefined),
     viewport: { width: 1440, height: 1000 },
   },
-  webServer: {
-    command: 'npm run dev -- --host 127.0.0.1 --port 5173 --strictPort',
-    url: 'http://localhost:5173',
-    reuseExistingServer: !process.env.CI,
-  },
+  webServer: [
+    {
+      command: process.platform === 'win32' ? 'C:\\xampp\\php\\php.exe -S 127.0.0.1:8000 -t .' : 'php -S 127.0.0.1:8000 -t .',
+      url: 'http://127.0.0.1:8000/api/tasks.php',
+      reuseExistingServer: !process.env.CI,
+    },
+    {
+      command: 'npm run dev -- --host 127.0.0.1 --port 5173 --strictPort',
+      url: 'http://127.0.0.1:5173',
+      reuseExistingServer: !process.env.CI,
+    },
+  ],
 })

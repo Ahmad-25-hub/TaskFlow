@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { ArrowRight, Plus, X } from 'lucide-react'
 import { TASK_STATUSES } from '../data/tasks'
 
-export default function AddTaskModal({ defaultStatus, onClose, onSubmit }) {
+export default function AddTaskModal({ defaultStatus, onClose, onSubmit, serverError }) {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [status, setStatus] = useState(defaultStatus)
@@ -49,6 +49,7 @@ export default function AddTaskModal({ defaultStatus, onClose, onSubmit }) {
           <button type="button" aria-label="Tutup form" className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700" onClick={onClose}><X size={18} /></button>
         </div>
         <form onSubmit={handleSubmit}>
+          {serverError && <p role="alert" className="mb-4 rounded-lg bg-red-50 p-3 text-xs text-red-700">{serverError}</p>}
           <label htmlFor="task-title" className="form-label">Judul task <span className="text-indigo-500">*</span></label>
           <input ref={titleRef} id="task-title" className="field mt-2 w-full px-3.5 py-3 text-sm" placeholder="Apa yang ingin kamu kerjakan?" required maxLength={120} value={title} onChange={(event) => { setTitle(event.target.value); setError('') }} aria-invalid={Boolean(error)} aria-describedby={error ? 'title-error' : undefined} />
           {error && <p id="title-error" className="mt-2 text-xs text-red-500">{error}</p>}

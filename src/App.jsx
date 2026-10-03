@@ -3,10 +3,13 @@ import { ArrowUpRight, CheckCheck, LayoutGrid, Plus, Search, X } from 'lucide-re
 import Navbar from './components/Navbar'
 import KanbanBoard from './components/KanbanBoard'
 import AddTaskModal from './components/AddTaskModal'
-import { initialTasks, TASK_STATUSES } from './data/tasks'
+import { TASK_STATUSES } from './data/tasks'
+import { taskApi } from './api/tasks'
 
 export default function App() {
-  const [tasks, setTasks] = useState(() => initialTasks.map((task) => ({ ...task })))
+  const [tasks, setTasks] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
   const [modalStatus, setModalStatus] = useState(null)
   const [query, setQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
@@ -19,28 +22,44 @@ export default function App() {
   })
 
   useEffect(() => {
+    taskApi.list().then(setTasks).catch((issue) => setError(issue.message)).finally(() => setLoading(false))
+  }, [])
+
+  useEffect(() => {
     if (!notice) return
     const timeout = setTimeout(() => setNotice(''), 4000)
     return () => clearTimeout(timeout)
   }, [notice])
 
-  function addTask(values) {
-    setTasks((current) => [{ id: crypto.randomUUID(), ...values, created_at: new Date().toISOString() }, ...current])
-    setQuery('')
-    setStatusFilter('all')
-    setModalStatus(null)
-    setNotice(`Task “${values.title}” berhasil ditambahkan.`)
+  async function addTask(values) {
+    try {
+      const task = await taskApi.create(values)
+      setTasks((current) => [task, ...current])
+      setQuery('')
+      setStatusFilter('all')
+      setModalStatus(null)
+      setError('')
+      setNotice(`Task “${task.title}” berhasil ditambahkan.`)
+    } catch (issue) { setError(issue.message) }
   }
 
-  function deleteTask(id) {
-    setTasks((current) => current.filter((task) => task.id !== id))
-    setNotice('Task berhasil dihapus.')
+  async function deleteTask(id) {
+    try {
+      await taskApi.remove(id)
+      setTasks((current) => current.filter((task) => task.id !== id))
+      setError('')
+      setNotice('Task berhasil dihapus.')
+    } catch (issue) { setError(issue.message) }
   }
 
-  function moveTask(id, status) {
+  async function moveTask(id, status) {
     if (!TASK_STATUSES.some((item) => item.id === status)) return
-    setTasks((current) => current.map((task) => task.id === id ? { ...task, status } : task))
-    setNotice(`Task dipindahkan ke ${TASK_STATUSES.find((item) => item.id === status).label}.`)
+    try {
+      await taskApi.move(id, status)
+      setTasks((current) => current.map((task) => task.id === id ? { ...task, status } : task))
+      setError('')
+      setNotice(`Task dipindahkan ke ${TASK_STATUSES.find((item) => item.id === status).label}.`)
+    } catch (issue) { setError(issue.message) }
   }
 
   return (
@@ -96,15 +115,16 @@ export default function App() {
               </select>
             </label>
           </div>
-          <KanbanBoard tasks={filteredTasks} allTasks={tasks} onAddTask={setModalStatus} onDeleteTask={deleteTask} onMoveTask={moveTask} isFiltered={Boolean(query.trim()) || statusFilter !== 'all'} />
+          {error && <p role="alert" className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+          {loading ? <p className="py-8 text-center text-sm text-slate-500">Memuat task...</p> : <KanbanBoard tasks={filteredTasks} allTasks={tasks} onAddTask={setModalStatus} onDeleteTask={deleteTask} onMoveTask={moveTask} isFiltered={Boolean(query.trim()) || statusFilter !== 'all'} />}
         </section>
         <footer className="mt-7 flex flex-col items-center justify-between gap-2 text-[11px] text-slate-400 sm:flex-row">
           <p>Drag kartu antar kolom, atau gunakan pilihan status di kartu.</p>
-          <p>Mode demo · Data direset saat halaman dimuat ulang</p>
+          <p>Data tersimpan di database TaskFlow</p>
         </footer>
       </main>
       <div aria-live="polite" role="status" className={notice ? 'toast' : 'sr-only'}>{notice && <CheckCheck size={18} className="shrink-0 text-emerald-500" />}{notice}</div>
-      {modalStatus && <AddTaskModal defaultStatus={modalStatus} onClose={() => setModalStatus(null)} onSubmit={addTask} />}
+      {modalStatus && <AddTaskModal defaultStatus={modalStatus} onClose={() => { setModalStatus(null); setError('') }} onSubmit={addTask} serverError={error} />}
     </div>
   )
 }
